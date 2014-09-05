@@ -23,6 +23,7 @@ static RESULT setClientStateActive(CLIENT_DB *cdb, clntid_t id);
 
 static RESULT sendUpdateToClient(CLIENT_DB *cdb, clntid_t id);
 
+
 /**
  * Get Client DB instance Singleton
  */
@@ -60,6 +61,9 @@ static void initClientDb(CLIENT_DB *cdb)
 	
 	//Get PlayList Class Instance
 	playList = getPlayListInstance();
+	cdb->schData[0].status = PL_NONE;
+	memset(cdb->schData[0].fileName,0,DOWNLOAD_FILE_NAME_SIZE);
+	cdb->scheduleIndex     = 0;
 }
 
 
@@ -86,7 +90,7 @@ static RESULT registerClient(CLIENT_DB *cdb, CLIENT_INFO *clntInfo)
 	
 	if(i < MAX_CLIENT)
 	{
-		//printf("Client is connecting second time\n");
+		LOG_MSG("Client is connecting second time\n");
 		// deregister old session
 		deregisterClient(cdb, i);
 	}
@@ -121,12 +125,12 @@ static RESULT deregisterClient(CLIENT_DB *cdb, clntid_t id)
 	}
 	if(id >= MAX_CLIENT)
 	{
-		//printf("Invalid client Id, clntId =%d\n",clientInfo->clientId);
+		LOG_ERROR("Invalid client Id, clntId =%d\n",clientInfo->clientId);
 		return G_FAIL;
 	}
 	if(cdb->clientState[id] == clnt_unregister_state)
 	{
-		//printf("Client is already de registered, clntId =%d\n",clientInfo->clientId);
+		LOG_ERROR("Client is already de registered, clntId =%d\n",clientInfo->clientId);
 		return G_FAIL;
 	}
 	cdb->deleteAllDataOfClient(id);
@@ -145,7 +149,7 @@ static RESULT addToClientQueue(CLIENT_DB *cdb,clntid_t id,u32 token,void *msg,u3
 	RESULT res = G_ERR;
 	if(!msg || !cdb || (id >= MAX_CLIENT) || (cdb->clientState[id] == clnt_unregister_state) )
 	{
-		//printf("Error in add to client queue\n");
+		LOG_ERROR("Error in add to client queue\n");
 		return G_FAIL;
 	}
 
@@ -167,12 +171,12 @@ static RESULT getClientIpAddress(CLIENT_DB *cdb,clntid_t id, u32 *address)
 	}
 	if(id >= MAX_CLIENT)
 	{
-		//printf("Invalid client Id, clntId =%d\n",clientInfo->clientId);
+		LOG_ERROR("Invalid client Id, clntId =%d, client IP %u\n",id);
 		return G_FAIL;
 	}
 	if(cdb->clientState[id] == clnt_unregister_state)
 	{
-		//printf("Client is already de registered, clntId =%d\n",clientInfo->clientId);
+		LOG_ERROR("Client is de-registered, clntId =%d\n",id);
 		return G_FAIL;
 	}
 	if(cdb->clientIP[id] == 0)
@@ -203,16 +207,71 @@ static RESULT setClientStateActive(CLIENT_DB *cdb, clntid_t id)
 	return G_OK;
 }
 
-static RESULT getClientRequestForDownloading(CLIENT_DB *cdb)
+static RESULT getClientRequestForDownloading(CLIENT_DB *cdb,MP3_FILE_REQ *req)
 {
+	RESULT res = G_FAIL;
+	if(!req)
+	{
+		LOG_ERROR("Request Message is null\n");
+		return res;
+	}
+	if(cdb->schData[cdb->scheduleIndex].status != PL_NONE)
+	{
+		//Current schedule position is already occupied
+		LOG_DEBUG("No postion empty for scheduling\n");
+		return G_FAIL;
+	}
+	res = cdb->playList->getOneForDownloading(cdb->playList,&req->clntId,&req->requestId);
+	if(res != G_OK)
+	{
+		LOG_DEBUG("NO Client to schedule\n");
+		return res;
+	}
+	sprintf(cdb->schData[cdb->scheduleIndex].fileName,"%s_%d_%u.mp3",PLAY_FILE_NAME,req->clntId,req->requestId);
+	req->fileName = cdb->schData[cdb->scheduleIndex].fileName;
+	req->ipaddress = cdb->clientIP[req->clntId];
+	
+	cdb->schData[cdb->scheduleIndex].clientId = req->clntId;
+	cdb->schData[cdb->scheduleIndex].reqToken = req->requestId;
+	cdb->schData[cdb->scheduleIndex].status = PL_DOWNLOADING;
 
+	// Get the next scheduling position
+	cdb->scheduleIndex = (cdb->scheduleIndex+1)%2;
 
-
+	return res;
+	
 }
 
-static RESULT setDownloadingStatus(CLIENT_DB *cdb, STATUS)
+static RESULT setDownloadingStatus(CLIENT_DB *cdb, MP3_FILE_REQ *resp)
 {
+	RESULT res = G_FAIL;
+	int i = 0;
+	if(!resp)
+	{
+		LOG_ERROR("Response Message is null\n");
+		return res;
+	}
+	for(i=0; i<2; i++)
+	{
+		if(cdb->schData[i].clientId == resp->clntId &&
+			cdb->schData[i].reqToken == resp->requestId &&
+			cdb->schData[i].status == PL_DOWNLOADING )
+			break;
+	}
+	if(i >= 2)
+	{
+		LOG_ERROR("FATAL ERROR, MissMatch between downloading request and response\n");
+		return res;
+	}
+	
+	switch(resp->fileState)
+	{
+		case MP3_FILE_READY:
+			cdb->schData[i].status = PL_READY;
+			//TODO set playlist enum accordingly
+			// Start from here
 
+	}
 
 }
 

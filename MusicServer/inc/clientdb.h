@@ -10,6 +10,8 @@
 #define MAX_CLIENT_NAME		128
 #define MAX_SONG_NAME		128
 #define MAX_ALBUM_NAME		64
+#define DOWNLOAD_FILE_NAME_SIZE	64
+#define PLAY_FILE_NAME	"/tmp/"
 
 typedef char	clntid_t;
 
@@ -36,6 +38,16 @@ typedef enum
 	clnt_last_state
 }CLIENT_STATE;
 
+typedef struct scheduleData
+{
+	char clientId;
+	u32  clientIP;
+	u32  reqToken;
+	PL_STATE status;
+	char fileName[DOWNLOAD_FILE_NAME_SIZE];
+}scheduledData;
+
+
 typedef struct clientDb
 {
 	clntid_t clientId[MAX_CLIENT];
@@ -43,6 +55,8 @@ typedef struct clientDb
 	unsigned int clientIP[MAX_CLIENT];
 	CLIENT_STATE clientState[MAX_CLIENT];
 	PLAYLIST *playList;
+	scheduledData schData[2];
+	int scheduleIndex;
 
 
 	RESULT (*registerClient)(struct clientDb *,CLIENT_INFO *);

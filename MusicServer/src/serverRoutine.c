@@ -224,11 +224,10 @@ void *getMP3FileFromClient(void *msg)
 		closeSocket(sockFd);
 		return NULL;
 	}
-	sprintf(buffer,"%s_%d.mp3",MP3FILE_LOC,req->fileName);
-	fd = open(buffer, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
+	fd = open(req->fileName, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
 	if(fd <= 0)
 	{
-		printf("[%s : %d ] Unable to create file %s\n",__FUNCTION__,__LINE__,buffer);
+		printf("[%s : %d ] Unable to create file %s\n",__FUNCTION__,__LINE__,req->fileName);
 		postFileTransferStatus(newRmMsg);
 		closeSocket(sockFd);
 		return NULL;

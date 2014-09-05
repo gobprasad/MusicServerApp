@@ -1,4 +1,5 @@
 #include "playlist.h"
+#include "loggingFrameWork.h"
 
 #define MAX_PLAYLIST	100
 
@@ -51,14 +52,14 @@ static RESULT addToPlayList(PLAYLIST *pl,clntid_t clntId,u32 tok,void *clntData,
 	RESULT res = G_ERR;
 	if(pl->playListSize >= MAX_PLAYLIST)
 	{
-		printf("INFO : [%s : %d] : Playlist is full\n",__FUNCTION__,__LINE__);
+		LOG_DEBUG("Playlist is full\n");
 		return res;
 	}
 	PlayListData *plD = NULL;
 	plD = (PlayListData *)malloc(sizeof(PlayListData));
 	if(plD == NULL)
 	{
-		printf("INFO [%s : %d] Malloc failed\n");
+		LOG_ERROR("Malloc failed\n");
 		return G_ERR;
 	}
 	plD->id			= clntId;

@@ -1,5 +1,6 @@
 #include "musicPlayer.h"
 #include "resourceManager.h"
+#include "loggingFrameWork.h"
 #include <pthread.h>
 
 #define BITS	8
@@ -73,7 +74,7 @@ static void *playSong(void *arg)
 	else
 		{
 			rmMsg->msgId = rm_mplayerErr_m;
-			printf("ERROR [%s : %d] : can not open file %s for playing\n",__FUNCTION__,__LINE__,mp->fileName);
+			LOG_ERROR("can not open file %s for playing\n",mp->fileName);
 		}
 	rm->postMsgToRm(rm, rmMsg);
 }

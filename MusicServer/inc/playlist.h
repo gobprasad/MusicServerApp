@@ -6,6 +6,7 @@
 
 typedef enum
 {
+	PL_NONE,
 	PL_WAITING,
 	PL_DOWNLOADING,
 	PL_READY,

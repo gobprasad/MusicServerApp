@@ -19,7 +19,7 @@ typedef struct
 	u32 requestId;
 	char clntId;
 	u32 ipaddress;
-	char fileName;
+	char *fileName;
 	MP3_FILE_STATE fileState;
 	
 }MP3_FILE_REQ;
