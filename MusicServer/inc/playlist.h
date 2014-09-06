@@ -29,7 +29,6 @@ typedef struct playList
 {
 	LIST pList[MAX_CLIENT];
 	int maxList;
-	int currentClient;
 	u32 playListSize;
 	char currentPlayingClient;
 	char currentDownloadingClient;

@@ -38,8 +38,8 @@ static void initPlayList(PLAYLIST *pl)
 	}
 	pthread_mutex_init(&pl->playListLock,NULL);
 	pl->playListSize =  0;
-	pl->currentDownloadingClient = 0;
-	pl->currentPlayingClient     = 0;
+	pl->currentDownloadingClient = -1;
+	pl->currentPlayingClient     = -1;
 
 	pl->addToPlayList			= addToPlayList;
 	pl->deleteDownloading		= deleteDownloading;
@@ -185,7 +185,8 @@ static RESULT playListSchedular(PLAYLIST *pl, PL_STATE state, PlayListData *resp
 	for(i=0; i<MAX_CLIENT; i++)
 	{
 		currentClient++;
-		currentClient = currentClient%MAX_CLIENT;
+		//it will run from 0-9
+		currentClient = currentClient%(MAX_CLIENT-1);
 
 		if(pl->pList[currentClient].first == NULL)
 			continue;
@@ -203,12 +204,16 @@ static RESULT playListSchedular(PLAYLIST *pl, PL_STATE state, PlayListData *resp
 		respClnt = clntData;
 		return G_OK;
 	}
+	if(pl->currentDownloadingClient < 0)
+	{
+		return G_FAIL;
+	}
 
 	// We dont have any other client to schedule
 	// Schedule the current client
-	if(pl->pList[pl->currentClient].first != NULL && pl->pList[pl->currentClient].first->next != NULL)
+	if(pl->pList[pl->currentDownloadingClient].first != NULL && pl->pList[pl->currentDownloadingClient].first->next != NULL)
 	{
-		clntData = (PlayListData *)(pl->pList[currentClient].first->next->data);
+		clntData = (PlayListData *)(pl->pList[pl->currentDownloadingClient].first->next->data);
 		if(clntData->plStatus == state)
 		{
 			respClnt = clntData;
