@@ -14,6 +14,7 @@ static RESULT addToPlayList(PLAYLIST *pl,clntid_t clntId,u32 tok,void *clntData)
 static RESULT deleteDownloading(PLAYLIST *pl,clntid_t clientId);
 static RESULT deletePlaying(PLAYLIST *pl,clntid_t clientId);
 static RESULT deleteFromPlayList(PLAYLIST *pl,clntid_t clientId);
+static RESULT setPlayListStatus(PLAYLIST *pl,clntid_t clientId,PL_STATE state);
 
 PLAYLIST *getPlayListInstance()
 {
@@ -44,6 +45,7 @@ static void initPlayList(PLAYLIST *pl)
 	pl->deletePlaying       	= deletePlaying;
 	pl->getOneForDownloading	= getOneForDownloading;
 	pl->getOneForPlaying        = getOneForPlaying;
+	pl->setPlayListStatus       = setPlayListStatus;
 }
 
 
@@ -216,4 +218,44 @@ static RESULT playListSchedular(PLAYLIST *pl, PL_STATE state, PlayListData *resp
 	}
 	respClnt = NULL;
 	return G_FAIL;
+}
+
+static RESULT setPlayListStatus(PLAYLIST *pl,clntid_t clientId,PL_STATE state)
+{
+	RESULT res = G_FAIL;
+	LIST_NODE *temp;
+	PL_STATE currState;
+	PlayListData *currData; 
+	if(state == PL_PLAYING)
+	{
+		currState = PL_READY;
+	} else if(state == PL_READY)
+	{
+		currState = PL_DOWNLOADING;
+	} else {
+
+		LOG_ERROR("FATAL ERROR: Unknown playing state");
+		return res;
+	}
+	pthread_mutex_lock(&pl->playListLock);
+	temp = pl->pList[clientId]->first
+	if(temp == NULL)
+	{
+		LOG_ERROR("FATAL ERROR: Request not found");
+		pthread_mutex_unlock(&pl->playListLock);
+		return res;
+	}
+	while(temp != NULL)
+	{
+		currData = (PlayListData *)temp->data;
+		if(currData->plStatus == currState)
+		{
+			currData->plStatus = state;
+			res = G_OK;
+			break;
+		}
+		temp = temp->next;
+	}
+	pthread_mutex_unlock(&pl->playListLock);
+	return res;
 }

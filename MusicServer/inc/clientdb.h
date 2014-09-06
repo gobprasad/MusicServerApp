@@ -6,12 +6,10 @@
 #include "packet.h"
 #include "playlist.h"
 
-#define MAX_CLIENT		10
-#define MAX_CLIENT_NAME		128
-#define MAX_SONG_NAME		128
-#define MAX_ALBUM_NAME		64
+#define MAX_CLIENT				10
+#define MAX_CLIENT_NAME			128
 #define DOWNLOAD_FILE_NAME_SIZE	64
-#define PLAY_FILE_NAME	"/tmp/"
+#define PLAY_FILE_NAME			"/tmp/"
 
 typedef char	clntid_t;
 
@@ -62,12 +60,12 @@ typedef struct clientDb
 	RESULT (*registerClient)(struct clientDb *,CLIENT_INFO *);
 	RESULT (*deregisterClient)(struct clientDb *,clntid_t);
 	RESULT (*addToQueue)(struct clientDb *,clntid_t,CLIENT_DATA *);
-	RESULT (*getOneFromQueue)(struct clientDb *,clntid_t, void *);
-	RESULT (*deleteOneFromQueue)(struct clientDb *,clntid_t);
 	RESULT (*getClientIpAddress)(struct clientDb *,clntid_t,u32 *);
-	RESULT (*getClientFirstToken)(struct clientDb *,clntid_t,u32 *);
-	RESULT (*setClientStateActive)(struct clientDb *,clntid_t);
-	RESULT (*getNextScheduledClient)(struct clientDb *,u32 *);
+	RESULT (*getClientRequestForDownloading)(struct clientDb *,MP3_FILE_REQ *);
+	RESULT (*setDownloadingStatus)(struct clientDb *, MP3_FILE_REQ *);
+	RESULT (*getClientRequestForPlaying)(struct clientDb *, char *);
+	RESULT (*setPlayingStatus)(struct clientDb *);
+
 }CLIENT_DB;
 
 CLIENT_DB *getClientDbInstance();

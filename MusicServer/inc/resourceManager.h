@@ -43,14 +43,10 @@ typedef enum
 typedef struct rmMan
 {
 	QUEUE rmQueue;
-	char fileNameBit;
 	rmState_e rmState;
 	rmStateFunc rmRunState[rm_LastState][rm_lastMsg_m];
 	RESULT (*postMsgToRm)(struct rmMan *, rmMsg_t *);
-	MP3_FILE_REQ *currentReq[2];
 	void (*runRM)(struct rmMan *);
-	char (*getNextFileName)(struct rmMan *);
-	
 }RManager;
 
 

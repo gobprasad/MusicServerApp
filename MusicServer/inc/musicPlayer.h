@@ -11,7 +11,7 @@ typedef struct mplayer
 	int driver;
 	unsigned char *buffer;
 	size_t buffer_size;
-	char fileName[64];
+	char *fileName;
 
 	// for stop current Playing
 	char stop;
