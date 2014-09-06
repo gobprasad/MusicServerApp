@@ -1,5 +1,6 @@
 #include "clientdb.h"
 #include "results.h"
+#include "loggingFrameWork.h"
 
 static CLIENT_DB *clientDBinstance = NULL;
 static void initClientDb(CLIENT_DB *cdb);
@@ -23,7 +24,7 @@ static RESULT getClientIpAddressFunc(CLIENT_DB *cdb,clntid_t id, u32 *address);
 
 //Private Member Function
 static RESULT deleteAllDataOfClient(CLIENT_DB *cdb,clntid_t id);
-static RESULT setClientStateActive(clntid_t id);
+static RESULT setClientStateActive(CLIENT_DB *cdb, clntid_t id);
 //static RESULT sendUpdateToClient(CLIENT_DB *cdb, clntid_t id);
 
 
@@ -54,7 +55,7 @@ static void initClientDb(CLIENT_DB *cdb)
 		cdb->clientIP[i] = 0;
 		cdb->clientState[i] = clnt_unregister_state;
 	}
-	cdb->currentScheduleClient = 0;
+	cdb->scheduleIndex = 0;
 	
 	cdb->registerClient			= registerClientFunc;
 	cdb->deregisterClient		= deregisterClientFunc;
@@ -67,7 +68,7 @@ static void initClientDb(CLIENT_DB *cdb)
 	
 	
 	//Get PlayList Class Instance
-	playList = getPlayListInstance();
+	cdb->playList = getPlayListInstance();
 	cdb->schData[0].status = PL_NONE;
 	memset(cdb->schData[0].fileName,0,DOWNLOAD_FILE_NAME_SIZE);
 	cdb->scheduleIndex     = 0;
@@ -132,12 +133,12 @@ static RESULT deregisterClientFunc(CLIENT_DB *cdb, clntid_t id)
 	}
 	if(id >= MAX_CLIENT)
 	{
-		LOG_ERROR("Invalid client Id, clntId =%d",clientInfo->clientId);
+		LOG_ERROR("Invalid client Id, clntId =%d",id);
 		return G_FAIL;
 	}
 	if(cdb->clientState[id] == clnt_unregister_state)
 	{
-		LOG_ERROR("Client is already de registered, clntId =%d",clientInfo->clientId);
+		LOG_ERROR("Client is already de registered, clntId =%d",id);
 		return G_FAIL;
 	}
 	deleteAllDataOfClient(cdb,id);
@@ -225,13 +226,13 @@ static RESULT getClientRequestForDownloadingFunc(CLIENT_DB *cdb,MP3_FILE_REQ *re
 	if(cdb->schData[cdb->scheduleIndex].status != PL_NONE)
 	{
 		//Current schedule position is already occupied
-		LOG_DEBUG("No postion empty for scheduling");
+		LOG_WARN("No postion empty for scheduling");
 		return G_FAIL;
 	}
 	res = cdb->playList->getOneForDownloading(cdb->playList,&req->clntId,&req->requestId);
 	if(res != G_OK)
 	{
-		LOG_DEBUG("NO Client to schedule");
+		LOG_WARN("NO Client to schedule");
 		return res;
 	}
 	sprintf(cdb->schData[cdb->scheduleIndex].fileName,"%s_%d_%u.mp3",PLAY_FILE_NAME,req->clntId,req->requestId);
@@ -281,7 +282,7 @@ static RESULT setDownloadingStatusFunc(CLIENT_DB *cdb, MP3_FILE_REQ *resp)
 			break;
 		case MP3_FILE_ERROR:
 			cdb->schData[i].status = PL_NONE;
-			cdb->playList->deleteDownloading(cdb->playList,resp->clntId);
+			cdb->playList->deleteDownloading(cdb->playList);
 			LOG_MSG("File %s download Error",resp->fileName);
 			unlink(resp->fileName);
 			break;
@@ -306,7 +307,7 @@ static RESULT getClientRequestForPlayingFunc(CLIENT_DB *cdb, char *playFile)
 	}
 	if(i >= 2)
 	{
-		LOG_DEBUG("No File ready for Playing");
+		LOG_WARN("No File ready for Playing");
 		return res;
 	}
 
@@ -337,7 +338,7 @@ static RESULT setPlayingStatusFunc(CLIENT_DB *cdb)
 		return res;
 	}
 	cdb->schData[i].status = PL_NONE;
-	cdb->playList->deletePlaying(cdb->playList,cdb->schData[i].clntId);
+	cdb->playList->deletePlaying(cdb->playList);
 	unlink(cdb->schData[i].fileName);
 	LOG_MSG("Successfully Played %s",cdb->schData[i].fileName);
 	return G_OK;

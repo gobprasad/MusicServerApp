@@ -1,17 +1,11 @@
 #ifndef __CLIENT_DB_H__
 #define __CLIENT_DB_H__
 
-
+#include "commonInclude.h"
 #include "queue.h"
 #include "packet.h"
 #include "playlist.h"
 
-#define MAX_CLIENT				10
-#define MAX_CLIENT_NAME			128
-#define DOWNLOAD_FILE_NAME_SIZE	64
-#define PLAY_FILE_NAME			"/tmp/"
-
-typedef char	clntid_t;
 
 typedef struct
 {
@@ -59,7 +53,7 @@ typedef struct clientDb
 
 	RESULT (*registerClient)(struct clientDb *,CLIENT_INFO *);
 	RESULT (*deregisterClient)(struct clientDb *,clntid_t);
-	RESULT (*addToQueue)(struct clientDb *,clntid_t,CLIENT_DATA *);
+	RESULT (*addToQueue)(struct clientDb *,clntid_t id,u32 token,void *msg,u32 size);
 	RESULT (*getClientIpAddress)(struct clientDb *,clntid_t,u32 *);
 	RESULT (*getClientRequestForDownloading)(struct clientDb *,MP3_FILE_REQ *);
 	RESULT (*setDownloadingStatus)(struct clientDb *, MP3_FILE_REQ *);

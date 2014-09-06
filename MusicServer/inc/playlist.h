@@ -1,8 +1,10 @@
 #ifndef __PLAYLIST_H__
 #define __PLAYLIST_H__
 #include <pthread.h>
-#include "List.h"
+#include "list.h"
 #include "results.h"
+#include "commonInclude.h"
+#include "serverRoutine.h"
 
 typedef enum
 {
@@ -28,15 +30,20 @@ typedef struct playList
 	LIST pList[MAX_CLIENT];
 	int maxList;
 	int currentClient;
+	u32 playListSize;
+	char currentPlayingClient;
+	char currentDownloadingClient;
 	pthread_mutex_t playListLock;
 
 
-	RESULT (*addToPlayList)(struct playList *,clntid_t id,u32 clientMask,void *data);
-	RESULT (*deleteFromPlayList)(struct playList *,clntid_t id,u32 clientMask,void *data);
-	RESULT (*getOneForPlaying)(struct playList *);
-	RESULT (*getOneForDownloading)(struct playList *);
+	RESULT (*addToPlayList)(struct playList *,clntid_t id,u32 token,void *data,u32 size);
+	RESULT (*deleteFromPlayList)(struct playList *,clntid_t id);
+	RESULT (*getOneForPlaying)(struct playList *,clntid_t *clientId, u32 *pltoken);
+	RESULT (*getOneForDownloading)(struct playList *,clntid_t *clientId, u32 *pltoken);
 	RESULT (*deletePlaying)(struct playList *);
+	// Need to make it token based otherwise problem may happen
 	RESULT (*deleteDownloading)(struct playList *);
+	RESULT (*setPlayListStatus)(struct playList *,clntid_t clientId,PL_STATE state);
 
 }PLAYLIST;
 

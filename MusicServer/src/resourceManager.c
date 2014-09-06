@@ -149,7 +149,7 @@ static void servRequest(RManager *rm, rmMsg_t * rmsg)
 			LOG_ERROR("default case");
 			break;
 	}
-	LOG_DEBUG("RM CURRENT STATE %d",rm->rmState);
+	LOG_MSG("RM CURRENT STATE %d",rm->rmState);
 	// Run the state machine on any msg received
 	if( rm->rmRunState[rm->rmState][rmsg->msgId] != NULL)
 	{
@@ -223,7 +223,7 @@ static void servClientRequest(clntMsg_t *msg)
 				break;
 			}*/
 			clntMusicData.requestId = msg->clntData.header.token;
-			if( cdb->addToQueue(cdb,msg->clntData.header.clntId,msg->clntData.header.token,msg->clntData.payLoad,msg->clntData.payLoad) != G_OK)
+			if( cdb->addToQueue(cdb,msg->clntData.header.clntId,msg->clntData.header.token,msg->clntData.payLoad,msg->clntData.payloadSize) != G_OK)
 			{
 				msg->clntData.header.msgId = resErr_m;
 				break;
@@ -349,7 +349,7 @@ static void callSchedular(RManager *rm, rmMsg_t *rmsg)
 
 static void handleDownloadComplete(RManager *rm,rmMsg_t * rmsg)
 {
-	LOG_DEBUG("File download completed successfully");
+	LOG_MSG("File download completed successfully");
 	MP3_FILE_REQ *mp3Req;
 	mp3Req = (MP3_FILE_REQ *)rmsg->data;
 	mp3Req->fileState = MP3_FILE_READY;
@@ -362,7 +362,7 @@ static void handleDownloadComplete(RManager *rm,rmMsg_t * rmsg)
 
 static void handleDownloadError(RManager *rm,rmMsg_t * rmsg)
 {
-	LOG_DEBUG("Error in download");
+	LOG_WARN("Error in download");
 	MP3_FILE_REQ *mp3Req;
 	mp3Req = (MP3_FILE_REQ *)rmsg->data;
 	mp3Req->fileState = MP3_FILE_ERROR;

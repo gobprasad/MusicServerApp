@@ -10,11 +10,13 @@ static void initPlayList(PLAYLIST *pl);
 RESULT downlaodingCheck(void *);
 RESULT playingCheck(void *);
 static RESULT playListSchedular(PLAYLIST *pl, PL_STATE state, PlayListData *respClnt);
-static RESULT addToPlayList(PLAYLIST *pl,clntid_t clntId,u32 tok,void *clntData);
-static RESULT deleteDownloading(PLAYLIST *pl,clntid_t clientId);
-static RESULT deletePlaying(PLAYLIST *pl,clntid_t clientId);
+static RESULT addToPlayList(PLAYLIST *pl,clntid_t clntId,u32 tok,void *clntData,u32 size);
+static RESULT deleteDownloading(PLAYLIST *pl);
+static RESULT deletePlaying(PLAYLIST *pl);
 static RESULT deleteFromPlayList(PLAYLIST *pl,clntid_t clientId);
 static RESULT setPlayListStatus(PLAYLIST *pl,clntid_t clientId,PL_STATE state);
+static RESULT getOneForDownloading(PLAYLIST *pl,clntid_t *clientId, u32 *pltoken);
+static RESULT getOneForPlaying(PLAYLIST *pl,clntid_t *clientId, u32 *pltoken);
 
 PLAYLIST *getPlayListInstance()
 {
@@ -32,7 +34,7 @@ static void initPlayList(PLAYLIST *pl)
 	int i = 0;
 	for(i = 0; i<MAX_CLIENT; i++)
 	{
-		pl->initList(&pl->pList[i]);
+		initList(&pl->pList[i]);
 	}
 	pthread_mutex_init(&pl->playListLock,NULL);
 	pl->playListSize =  0;
@@ -54,7 +56,7 @@ static RESULT addToPlayList(PLAYLIST *pl,clntid_t clntId,u32 tok,void *clntData,
 	RESULT res = G_ERR;
 	if(pl->playListSize >= MAX_PLAYLIST)
 	{
-		LOG_DEBUG("Playlist is full\n");
+		LOG_WARN("Playlist is full\n");
 		return res;
 	}
 	PlayListData *plD = NULL;
@@ -185,10 +187,10 @@ static RESULT playListSchedular(PLAYLIST *pl, PL_STATE state, PlayListData *resp
 		currentClient++;
 		currentClient = currentClient%MAX_CLIENT;
 
-		if(pl->pList[currentClient]->first == NULL)
+		if(pl->pList[currentClient].first == NULL)
 			continue;
 
-		clntData = (PlayListData *)(pl->pList[currentClient]->first->data);
+		clntData = (PlayListData *)(pl->pList[currentClient].first->data);
 		if(clntData->plStatus == state)
 		{
 			found = 1;
@@ -204,9 +206,9 @@ static RESULT playListSchedular(PLAYLIST *pl, PL_STATE state, PlayListData *resp
 
 	// We dont have any other client to schedule
 	// Schedule the current client
-	if(pl->pList[pl->currentClient]->first != NULL && pl->pList[pl->currentClient]->first->next != NULL)
+	if(pl->pList[pl->currentClient].first != NULL && pl->pList[pl->currentClient].first->next != NULL)
 	{
-		clntData = (PlayListData *)(pl->pList[currentClient]->first->next->data)
+		clntData = (PlayListData *)(pl->pList[currentClient].first->next->data);
 		if(clntData->plStatus == state)
 		{
 			respClnt = clntData;
@@ -238,7 +240,7 @@ static RESULT setPlayListStatus(PLAYLIST *pl,clntid_t clientId,PL_STATE state)
 		return res;
 	}
 	pthread_mutex_lock(&pl->playListLock);
-	temp = pl->pList[clientId]->first
+	temp = pl->pList[clientId].first;
 	if(temp == NULL)
 	{
 		LOG_ERROR("FATAL ERROR: Request not found");
