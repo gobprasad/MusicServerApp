@@ -217,11 +217,6 @@ static void servClientRequest(clntMsg_t *msg)
 				msg->clntData.header.msgId = resErr_m;
 				break;
 			}
-			/*if(decodeMusicAddData(msg->clntData.payLoad, &clntMusicData) != G_OK)
-			{
-				msg->clntData.header.msgId = resErr_m;
-				break;
-			}*/
 			clntMusicData.requestId = msg->clntData.header.token;
 			if( cdb->addToQueue(cdb,msg->clntData.header.clntId,msg->clntData.header.token,msg->clntData.payLoad,msg->clntData.payloadSize) != G_OK)
 			{

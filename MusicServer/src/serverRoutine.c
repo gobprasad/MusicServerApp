@@ -10,6 +10,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include "loggingFrameWork.h"
 
 static void freeClientMsg(clntMsg_t *newClntMsg);
 static void postFileTransferStatus(rmMsg_t *newRmMsg);
@@ -35,7 +36,7 @@ void *handleClient(void *msg)
 	// Signature Validation
 	if(signature != SIGNATURE)
 	{
-		printf("Unknown Client\n");
+		LOG_WARN("Unknown Client");
 		closeSocket(newClntMsg->clntSockFd);
 		freeClientMsg(newClntMsg);
 		return;
@@ -44,7 +45,7 @@ void *handleClient(void *msg)
 	totSize = ntohl(totSize);
 	if(totSize > 4096)
 	{
-		printf("Total Size of client Data is %d, Error\n",totSize);
+		LOG_WARN("Total Size of client Data is %d",totSize);
 		closeSocket(newClntMsg->clntSockFd);
 		freeClientMsg(newClntMsg);
 		return;
@@ -65,7 +66,7 @@ void *handleClient(void *msg)
 	rmMsg_t *newRmMsg = (rmMsg_t *)malloc(sizeof(rmMsg_t));
 	if(newRmMsg == NULL)
 	{
-		printf("Error [%s : %d] : Malloc failed\n",__FUNCTION__,__LINE__);
+		LOG_ERROR("Malloc failed");
 		free(clntBuf);
 		sendNACKandClose((void *)newClntMsg);
 		return;
@@ -98,7 +99,7 @@ void *sendNACKandClose(void *arg)
 	size = encodePacket(&newClntMsg->clntData,&buf);
 	if(size <= 0)
 	{
-		printf("[%s : %d] : Error while sending NACK\n");
+		LOG_ERROR("Error while sending NACK");
 		closeSocket(newClntMsg->clntSockFd);
 		freeClientMsg(newClntMsg);
 		return;
@@ -121,14 +122,14 @@ void *sendACKandClose(void *arg)
 
 	if(size <= 0 || !buf)
 	{
-		printf("[%s : %d] : Error while sending NACK\n");
+		LOG_ERROR("Error while sending NACK");
 		closeSocket(newClntMsg->clntSockFd);
 		freeClientMsg(newClntMsg);
 		return;
 	}
 	// Send Data to client
 	size = sendData(newClntMsg->clntSockFd,size,buf);
-	printf("Total Size sent %d\n",size);
+	LOG_MSG("Total Size sent %d",size);
 	if(buf != NULL)
 		free(buf);
 
@@ -171,7 +172,7 @@ void *getMP3FileFromClient(void *msg)
 	rmMsg_t *newRmMsg = (rmMsg_t *)malloc(sizeof(rmMsg_t));
 	if(newRmMsg == NULL)
 	{
-		printf("Error [%s : %d] : FATAL ERROR Resource Manager may stuck Malloc failed\n",__FUNCTION__,__LINE__);
+		LOG_ERROR("FATAL ERROR Resource Manager may stuck Malloc failed");
 		return;
 	}
 	MP3_FILE_REQ *req = (MP3_FILE_REQ*)msg;
@@ -182,7 +183,7 @@ void *getMP3FileFromClient(void *msg)
 
 	if(req == NULL)
 	{
-		printf("[%s : %d ] Request Message is NULL\n",__FUNCTION__,__LINE__);
+		LOG_ERROR("Request Message is NULL");
 		postFileTransferStatus(newRmMsg);
 		return NULL;
 	}
@@ -194,7 +195,7 @@ void *getMP3FileFromClient(void *msg)
 	
 	sockFd = createClientSocket(buffer,8091);
 	if(sockFd == -1){
-		printf("[%s : %d ] Unable to connect with client\n",__FUNCTION__,__LINE__);
+		LOG_ERROR("Unable to connect with client");
 		postFileTransferStatus(newRmMsg);
 		return NULL;
 	}
@@ -204,14 +205,14 @@ void *getMP3FileFromClient(void *msg)
 	memcpy(buffer+2,&reqID,4);
 	if(sendData(sockFd,6,buffer) < 6)
 	{
-		printf("[%s : %d ] Unable to send \n",__FUNCTION__,__LINE__);
+		LOG_ERROR("Unable to send");
 		postFileTransferStatus(newRmMsg);
 		closeSocket(sockFd);
 		return NULL;
 	}
 	if(receiveData(sockFd,4,(char*)&fileSize) < 4)
 	{
-		printf("[%s : %d ] Unable to receive \n",__FUNCTION__,__LINE__);
+		LOG_ERROR("Unable to receive \n");
 		postFileTransferStatus(newRmMsg);
 		closeSocket(sockFd);
 		return NULL;
@@ -219,7 +220,7 @@ void *getMP3FileFromClient(void *msg)
 	fileSize = ntohl(fileSize);
 	if(fileSize == 0 || fileSize > (20*1024*1024))
 	{
-		printf("[%s : %d ] Error File Size %u \n",__FUNCTION__,__LINE__,fileSize);
+		LOG_ERROR("Error File Size %u ",fileSize);
 		postFileTransferStatus(newRmMsg);
 		closeSocket(sockFd);
 		return NULL;
@@ -227,7 +228,7 @@ void *getMP3FileFromClient(void *msg)
 	fd = open(req->fileName, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
 	if(fd <= 0)
 	{
-		printf("[%s : %d ] Unable to create file %s\n",__FUNCTION__,__LINE__,req->fileName);
+		LOG_ERROR("Unable to create file %s",req->fileName);
 		postFileTransferStatus(newRmMsg);
 		closeSocket(sockFd);
 		return NULL;
@@ -238,7 +239,7 @@ void *getMP3FileFromClient(void *msg)
 		currentRead = receiveData(sockFd,currentRead,buffer);
 		if(currentRead == 0)
 		{
-			printf("[%s : %d ] Read return 0 bytes Total Read %u \n",__FUNCTION__,__LINE__,totalRead);
+			LOG_WARN("Read return 0 bytes Total Read %u",totalRead);
 			close(fd);
 			closeSocket(sockFd);
 			postFileTransferStatus(newRmMsg);
@@ -260,7 +261,7 @@ static void postFileTransferStatus(rmMsg_t *newRmMsg)
 	
 	if(rm->postMsgToRm(rm, newRmMsg) != G_OK)
 	{
-		printf("ERROR [%s : %d ] not able to post message to resource manager\n",__FUNCTION__,__LINE__);
+		LOG_ERROR("Not able to post message to resource manager");
 		free(newRmMsg);
 	}
 }
