@@ -127,7 +127,7 @@ static unsigned long getIPAddress(char *address ){
  */
 unsigned int receiveData(int sockFd, unsigned int size, char *buf)
 {
-	printf("Receiving from sockfd %d\n",sockFd);
+	//printf("Receiving from sockfd %d\n",sockFd);
 	unsigned int totalRecv = 0;
 	int receive = 0;
 	while(	totalRecv < size )

@@ -9,7 +9,7 @@ static void initPlayList(PLAYLIST *pl);
 
 RESULT downlaodingCheck(void *);
 RESULT playingCheck(void *);
-static RESULT playListSchedular(PLAYLIST *pl, PL_STATE state, PlayListData *respClnt);
+static RESULT playListSchedular(PLAYLIST *pl, PL_STATE state, PlayListData **respClnt);
 static RESULT addToPlayList(PLAYLIST *pl,clntid_t clntId,u32 tok,void *clntData,u32 size);
 static RESULT deleteDownloading(PLAYLIST *pl);
 static RESULT deletePlaying(PLAYLIST *pl);
@@ -93,9 +93,11 @@ static RESULT deletePlaying(PLAYLIST *pl)
 {
 	RESULT res = G_ERR;
 	pthread_mutex_lock(&pl->playListLock);
+	printf("we are here delete playing\n");
 	res = deleteOneFromListHaving(&pl->pList[pl->currentPlayingClient], playingCheck);
 	pl->playListSize = (res == G_OK)?pl->playListSize--:pl->playListSize;
 	pthread_mutex_unlock(&pl->playListLock);
+	printf("out of delete playing\n");
 	return res;
 }
 
@@ -113,9 +115,10 @@ static RESULT getOneForDownloading(PLAYLIST *pl,clntid_t *clientId, u32 *pltoken
 	RESULT res = G_FAIL;
 	PlayListData * respClnt = NULL;
 	pthread_mutex_lock(&pl->playListLock);
-	res = playListSchedular(pl,PL_DOWNLOADING,respClnt);
+	res = playListSchedular(pl,PL_DOWNLOADING,&respClnt);
 	if(res == G_OK)
 	{
+		printf("we are here\n");
 		*pltoken  = respClnt->token;
 		*clientId = respClnt->id;
 		pl->currentDownloadingClient = respClnt->id;
@@ -130,13 +133,14 @@ static RESULT getOneForPlaying(PLAYLIST *pl,clntid_t *clientId, u32 *pltoken)
 	RESULT res = G_FAIL;
 	PlayListData * respClnt = NULL;
 	pthread_mutex_lock(&pl->playListLock);
-	res = playListSchedular(pl,PL_PLAYING,respClnt);
+	res = playListSchedular(pl,PL_PLAYING,&respClnt);
 	if(res == G_OK)
 	{
 		*pltoken  = respClnt->token;
 		*clientId = respClnt->id;
 		pl->currentPlayingClient = respClnt->id;
 		respClnt->plStatus = PL_PLAYING;
+		pl->currentPlayingClient = respClnt->id;
 	}
 	pthread_mutex_unlock(&pl->playListLock);
 	return res;
@@ -168,7 +172,7 @@ RESULT playingCheck(void *data)
 	return G_FAIL;
 }
 
-static RESULT playListSchedular(PLAYLIST *pl, PL_STATE state, PlayListData *respClnt)
+static RESULT playListSchedular(PLAYLIST *pl, PL_STATE state, PlayListData **respClnt)
 {
 	int i = 0;
 	PlayListData *clntData = NULL;
@@ -201,7 +205,8 @@ static RESULT playListSchedular(PLAYLIST *pl, PL_STATE state, PlayListData *resp
 
 	if(found)
 	{
-		respClnt = clntData;
+		printf("Schedular found\n");
+		*respClnt = clntData;
 		return G_OK;
 	}
 	if(pl->currentDownloadingClient < 0)
@@ -216,7 +221,7 @@ static RESULT playListSchedular(PLAYLIST *pl, PL_STATE state, PlayListData *resp
 		clntData = (PlayListData *)(pl->pList[pl->currentDownloadingClient].first->next->data);
 		if(clntData->plStatus == state)
 		{
-			respClnt = clntData;
+			*respClnt = clntData;
 			return G_OK;
 		} else {
 			respClnt = NULL;

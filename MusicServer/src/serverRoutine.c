@@ -218,6 +218,7 @@ void *getMP3FileFromClient(void *msg)
 		return NULL;
 	}
 	fileSize = ntohl(fileSize);
+	printf("File Size is %u\n",fileSize);
 	if(fileSize == 0 || fileSize > (20*1024*1024))
 	{
 		LOG_ERROR("Error File Size %u ",fileSize);

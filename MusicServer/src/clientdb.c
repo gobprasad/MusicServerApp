@@ -16,7 +16,7 @@ static RESULT getClientRequestForDownloadingFunc(CLIENT_DB *cdb,MP3_FILE_REQ *re
 static RESULT setDownloadingStatusFunc(CLIENT_DB *cdb, MP3_FILE_REQ *resp);
 
 
-static RESULT getClientRequestForPlayingFunc(CLIENT_DB *cdb, char *playFile);
+static RESULT getClientRequestForPlayingFunc(CLIENT_DB *cdb, char **playFile);
 static RESULT setPlayingStatusFunc(CLIENT_DB *cdb);
 
 static RESULT getClientIpAddressFunc(CLIENT_DB *cdb,clntid_t id, u32 *address);
@@ -299,7 +299,7 @@ static RESULT setDownloadingStatusFunc(CLIENT_DB *cdb, MP3_FILE_REQ *resp)
 
 }
 
-static RESULT getClientRequestForPlayingFunc(CLIENT_DB *cdb, char *playFile)
+static RESULT getClientRequestForPlayingFunc(CLIENT_DB *cdb, char **playFile)
 {
 	RESULT res = G_FAIL;
 	int i = 0;
@@ -315,7 +315,7 @@ static RESULT getClientRequestForPlayingFunc(CLIENT_DB *cdb, char *playFile)
 	}
 
 	// File ready for playing
-	playFile = cdb->schData[i].fileName;
+	*playFile = cdb->schData[i].fileName;
 	cdb->schData[i].status  = PL_PLAYING;
 	res = cdb->playList->setPlayListStatus(cdb->playList,cdb->schData[i].clientId,PL_PLAYING);
 	if(res != G_OK)

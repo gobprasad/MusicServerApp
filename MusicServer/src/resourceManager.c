@@ -275,12 +275,13 @@ static void moveToPlaying(RManager *rm, rmMsg_t *rmsg)
 	switch(rm->rmState)
 	{
 		case rm_Downloading:
-			if(cdb->getClientRequestForPlaying(cdb,mp->fileName) != G_OK)
+			if(cdb->getClientRequestForPlaying(cdb,&mp->fileName) != G_OK)
 			{
 				LOG_ERROR("File is not ready for Playing");
 				rm->rmState = rm_Idle;
 				break;
 			}
+			LOG_MSG("Sending file %s to MP3 Player for playing", mp->fileName);
 			if(addJobToQueue(mp->playSong,(void *)mp) != G_OK)
 			{
 				LOG_ERROR("Fatal Error cant sent to job queue");
