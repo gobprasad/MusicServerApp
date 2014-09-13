@@ -30,7 +30,8 @@
 #include <netinet/in.h>
 #include <fcntl.h>
 #include <sys/select.h>
-
+#include <sys/ioctl.h>
+#include "loggingFrameWork.h"
 
 #include <error.h>
 
@@ -144,7 +145,7 @@ unsigned int receiveData(int sockFd, unsigned int size, char *buf)
 	while(	totalRecv < size )
 	{
 		readfds = activeFdSet;
-		if((retVal = select(readfds+1, &readfds, NULL, NULL, &tVal)) == -1)
+		if((retVal = select(sockFd+1, &readfds, NULL, NULL, &tVal)) == -1)
 		{
 			LOG_ERROR("FATAL ERROR : Select fail");
 			return 0;
@@ -165,12 +166,13 @@ unsigned int receiveData(int sockFd, unsigned int size, char *buf)
 			totalRecv += receive;
 			//TODO need to check this one;
 		} else if(receive < 0){
-			continue;
+			return 0;
 		} else {
 			LOG_WARN("Client Disconnected %d Returned in recv\n",receive);
 			break;
 		}
 	}
+	FD_CLR(sockFd,&activeFdSet);
 	return totalRecv;
 }
 
@@ -193,10 +195,10 @@ unsigned int sendData(int sockFd, unsigned int size, char *buf)
 	
 	//printf("Sending to sockfd %d\n",sockFd);
 	int sent = 0;
-	while(	totalSend < size )
+	while(totalSend < size )
 	{
 		writefds = activeFdSet;
-		if((retVal = select(writefds+1, &writefds, NULL, NULL, &tVal)) == -1)
+		if((retVal = select(sockFd+1, NULL, &writefds, NULL, &tVal)) == -1)
 		{
 			LOG_ERROR("FATAL ERROR : Select fail");
 			return 0;
@@ -216,12 +218,13 @@ unsigned int sendData(int sockFd, unsigned int size, char *buf)
 		{
 			totalSend += sent;
 		} else if(sent < 0){
-			continue;
+			return 0;
 		} else {
 			LOG_ERROR("Client Disconnected %d Returned in send\n",sent);
 			break;
 		}
 	}
+	FD_CLR(sockFd,&activeFdSet);
 	return totalSend;
 }
 
@@ -243,10 +246,10 @@ RESULT setSocketBlockingEnabled(int fd, char blocking)
    unsigned long mode = blocking ? 0 : 1;
    return (ioctlsocket(fd, FIONBIO, &mode) == 0) ? G_OK : G_FAIL;
 #else
-   int flags = fcntl(fd, F_GETFL, 0);
-   if (flags < 0) return G_FAIL;
-   flags = blocking ? (flags&~O_NONBLOCK) : (flags|O_NONBLOCK);
-   return (fcntl(fd, F_SETFL, flags) == 0) ? G_OK : G_FAIL;
+   //int flags = fcntl(fd, F_GETFL, 0);
+   //if (flags < 0) return G_FAIL;
+   //flags = blocking ? (flags&~O_NONBLOCK) : (flags|O_NONBLOCK);
+   return (ioctl(fd, (int)FIONBIO,&blocking) == 0) ? G_OK : G_FAIL;
 #endif
 }
 

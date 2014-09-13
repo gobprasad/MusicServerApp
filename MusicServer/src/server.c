@@ -51,7 +51,7 @@ void *startServerSocket(void *arg)
 			continue;
 		}
 
-		if(setSocketBlockingEnabled(clntSockFd,0) != G_OK)
+		if(setSocketBlockingEnabled(clntSockFd,1) != G_OK)
 			LOG_ERROR("Not able to set non blocking client socket");
 		// Create Job Args
 		clntMsg_t *newClntMsg = (clntMsg_t *)malloc(sizeof(clntMsg_t));

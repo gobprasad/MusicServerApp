@@ -21,7 +21,7 @@
 
 #ifndef __GSOCKET_H__
 #define __GSOCKET_H__
-
+#include "results.h"
 int createServerSocket(char *localAdd, int port);
 int createClientSocket(char *serverAdd, int port);
 unsigned int receiveData(int sockFd, unsigned int size, char *buf);
