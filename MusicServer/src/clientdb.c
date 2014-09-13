@@ -117,10 +117,6 @@ static RESULT registerClientFunc(CLIENT_DB *cdb, CLIENT_INFO *clntInfo)
 	strncpy(cdb->clientName[i],clntInfo->clientName,MAX_CLIENT_NAME);
 	cdb->clientIP[i] = clntInfo->clientIP;
 	cdb->clientState[i] = clnt_registered_state;
-
-	// only for testing
-	char *msg = (char*)malloc(10);
-	addToClientQueueFunc(cdb,i,455,(void*)msg,10);
 	return G_OK;
 }
 

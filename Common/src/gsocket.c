@@ -28,6 +28,9 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <netinet/in.h>
+#include <fcntl.h>
+#include <sys/select.h>
+
 
 #include <error.h>
 
@@ -127,20 +130,45 @@ static unsigned long getIPAddress(char *address ){
  */
 unsigned int receiveData(int sockFd, unsigned int size, char *buf)
 {
+	struct timeval tVal;
+	tVal.tv_sec  = 3;
+	tVal.tv_usec = 0;
+	int retVal;
+	
 	//printf("Receiving from sockfd %d\n",sockFd);
 	unsigned int totalRecv = 0;
 	int receive = 0;
+	fd_set readfds, activeFdSet;
+	FD_ZERO(&activeFdSet);
+	FD_SET(sockFd, &activeFdSet);
 	while(	totalRecv < size )
 	{
+		readfds = activeFdSet;
+		if((retVal = select(readfds+1, &readfds, NULL, NULL, &tVal)) == -1)
+		{
+			LOG_ERROR("FATAL ERROR : Select fail");
+			return 0;
+		}
+		if(retVal == 0)
+		{
+			LOG_ERROR("Timeout in Receiving");
+			return 0;
+		}
+		if(!FD_ISSET(sockFd, &readfds))
+		{
+			LOG_WARN("My Fd is not set");
+			continue;
+		}
 		receive = recv(sockFd ,buf+totalRecv , size-totalRecv , 0);
 		if(receive > 0 )
 		{
 			totalRecv += receive;
-		} else if(receive == 0){
+			//TODO need to check this one;
+		} else if(receive < 0){
 			continue;
 		} else {
+			LOG_WARN("Client Disconnected %d Returned in recv\n",receive);
 			break;
-			printf("Client Disconnected %d Returned in recv\n",receive);
 		}
 	}
 	return totalRecv;
@@ -152,20 +180,46 @@ unsigned int receiveData(int sockFd, unsigned int size, char *buf)
  */
 unsigned int sendData(int sockFd, unsigned int size, char *buf)
 {
+	struct timeval tVal;
+	tVal.tv_sec  = 3;
+	tVal.tv_usec = 0;
+	int retVal = 0;
+	
 	unsigned int totalSend = 0;
-	printf("Sending to sockfd %d\n",sockFd);
+
+	fd_set writefds, activeFdSet;
+	FD_ZERO(&activeFdSet);
+	FD_SET(sockFd, &activeFdSet);
+	
+	//printf("Sending to sockfd %d\n",sockFd);
 	int sent = 0;
 	while(	totalSend < size )
 	{
+		writefds = activeFdSet;
+		if((retVal = select(writefds+1, &writefds, NULL, NULL, &tVal)) == -1)
+		{
+			LOG_ERROR("FATAL ERROR : Select fail");
+			return 0;
+		}
+		if(retVal == 0)
+		{
+			LOG_ERROR("Timeout in Sending");
+			return 0;
+		}
+		if(!FD_ISSET(sockFd, &writefds))
+		{
+			LOG_WARN("My Fd is not set");
+			continue;
+		}
 		sent = write(sockFd ,buf+totalSend , size-totalSend);
 		if(sent > 0 )
 		{
 			totalSend += sent;
-		} else if(sent == 0){
+		} else if(sent < 0){
 			continue;
 		} else {
+			LOG_ERROR("Client Disconnected %d Returned in send\n",sent);
 			break;
-			printf("Client Disconnected %d Returned in send\n",sent);
 		}
 	}
 	return totalSend;
@@ -178,5 +232,21 @@ unsigned int sendData(int sockFd, unsigned int size, char *buf)
 void closeSocket(int sockFd)
 {
 	close(sockFd);
+}
+
+/** Returns true on success, or false if there was an error */
+RESULT setSocketBlockingEnabled(int fd, char blocking)
+{
+   if (fd < 0) return G_FAIL;
+
+#ifdef WIN32
+   unsigned long mode = blocking ? 0 : 1;
+   return (ioctlsocket(fd, FIONBIO, &mode) == 0) ? G_OK : G_FAIL;
+#else
+   int flags = fcntl(fd, F_GETFL, 0);
+   if (flags < 0) return G_FAIL;
+   flags = blocking ? (flags&~O_NONBLOCK) : (flags|O_NONBLOCK);
+   return (fcntl(fd, F_SETFL, flags) == 0) ? G_OK : G_FAIL;
+#endif
 }
 

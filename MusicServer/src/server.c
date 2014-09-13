@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <netinet/in.h>
+#include "loggingFrameWork.h"
 
 
 #define MAX_CONNECTION	5
@@ -33,7 +34,7 @@ void *startServerSocket(void *arg)
 
 	int sockFd = createServerSocket(SERVER_ADDRESS, SERVER_PORT);
 	if(sockFd < 0){
-		printf("Fatal Error... Socket Creation Failed\n");
+		LOG_ERROR("Fatal Error... Socket Creation Failed");
 		exit(0);
 	}
 
@@ -45,14 +46,18 @@ void *startServerSocket(void *arg)
 	{	
 		// Accept connection from clients; Blocking call
 		clntSockFd = accept(sockFd, (struct sockaddr *)&cli_addr, &clilen);
-		if (clntSockFd < 0)
-			printf("ERROR on accept\n");
-		
+		if (clntSockFd < 0){
+			LOG_ERROR("ERROR on accept");
+			continue;
+		}
+
+		if(setSocketBlockingEnabled(clntSockFd,0) != G_OK)
+			LOG_ERROR("Not able to set non blocking client socket");
 		// Create Job Args
 		clntMsg_t *newClntMsg = (clntMsg_t *)malloc(sizeof(clntMsg_t));
 		newClntMsg->clntSockFd = clntSockFd;
 		newClntMsg->cli_addr   = cli_addr.sin_addr.s_addr;
-		printf("connected to sockfd %d\n",clntSockFd);
+		LOG_MSG("connected to sockfd %d",clntSockFd);
 		// Add clnt handling to Job Queue
 		addJobToQueue(handleClient, (void *)newClntMsg);
 	}

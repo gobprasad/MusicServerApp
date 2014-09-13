@@ -93,11 +93,9 @@ static RESULT deletePlaying(PLAYLIST *pl)
 {
 	RESULT res = G_ERR;
 	pthread_mutex_lock(&pl->playListLock);
-	printf("we are here delete playing\n");
 	res = deleteOneFromListHaving(&pl->pList[pl->currentPlayingClient], playingCheck);
 	pl->playListSize = (res == G_OK)?pl->playListSize--:pl->playListSize;
 	pthread_mutex_unlock(&pl->playListLock);
-	printf("out of delete playing\n");
 	return res;
 }
 
@@ -118,7 +116,6 @@ static RESULT getOneForDownloading(PLAYLIST *pl,clntid_t *clientId, u32 *pltoken
 	res = playListSchedular(pl,PL_DOWNLOADING,&respClnt);
 	if(res == G_OK)
 	{
-		printf("we are here\n");
 		*pltoken  = respClnt->token;
 		*clientId = respClnt->id;
 		pl->currentDownloadingClient = respClnt->id;
@@ -205,7 +202,6 @@ static RESULT playListSchedular(PLAYLIST *pl, PL_STATE state, PlayListData **res
 
 	if(found)
 	{
-		printf("Schedular found\n");
 		*respClnt = clntData;
 		return G_OK;
 	}
@@ -271,3 +267,4 @@ static RESULT setPlayListStatus(PLAYLIST *pl,clntid_t clientId,PL_STATE state)
 	pthread_mutex_unlock(&pl->playListLock);
 	return res;
 }
+

@@ -27,6 +27,6 @@ int createClientSocket(char *serverAdd, int port);
 unsigned int receiveData(int sockFd, unsigned int size, char *buf);
 unsigned int sendData(int sockFd, unsigned int size, char *buf);
 void closeSocket(int sockFd);
-
+RESULT setSocketBlockingEnabled(int fd, char blocking);
 
 #endif //__GSOCKET_H__

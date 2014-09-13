@@ -30,7 +30,13 @@ void *handleClient(void *msg)
 
 
 	// Get the Signature and file Size to receive
-	receiveData(newClntMsg->clntSockFd, 5, buf);
+	if(receiveData(newClntMsg->clntSockFd, 5, buf) < 5)
+	{
+		LOG_WARN("Client disconnected in signature reading");
+		closeSocket(newClntMsg->clntSockFd);
+		freeClientMsg(newClntMsg);
+		return;
+	}
 	memcpy(&signature,buf,1);
 
 	// Signature Validation
@@ -52,7 +58,14 @@ void *handleClient(void *msg)
 	}
 	// Recieve all Data from Client
 	clntBuf = malloc(totSize-5);
-	receiveData(newClntMsg->clntSockFd, totSize-5, clntBuf);
+	if(receiveData(newClntMsg->clntSockFd, totSize-5, clntBuf) < (totSize-5))
+	{
+		LOG_WARN("Client disconnected in receiving data");
+		closeSocket(newClntMsg->clntSockFd);
+		freeClientMsg(newClntMsg);
+		free(clntBuf);
+		return;
+	}
 	
 	//decode client Packet
 	if(decodePacket(&newClntMsg->clntData, clntBuf, totSize-5) != G_OK){
@@ -105,7 +118,11 @@ void *sendNACKandClose(void *arg)
 		return;
 	}
 	// Send Data to client
-	sendData(newClntMsg->clntSockFd,size,buf);
+	if(sendData(newClntMsg->clntSockFd,size,buf) < size)
+	{
+		LOG_ERROR("Error in sending Nack message");
+	}
+		
 	closeSocket(newClntMsg->clntSockFd);
 	freeClientMsg(newClntMsg);
 }
@@ -128,8 +145,10 @@ void *sendACKandClose(void *arg)
 		return;
 	}
 	// Send Data to client
-	size = sendData(newClntMsg->clntSockFd,size,buf);
-	LOG_MSG("Total Size sent %d",size);
+	if(sendData(newClntMsg->clntSockFd,size,buf) < size)
+	{
+		LOG_ERROR("Error in sending Ack message");
+	}
 	if(buf != NULL)
 		free(buf);
 
@@ -195,7 +214,13 @@ void *getMP3FileFromClient(void *msg)
 	
 	sockFd = createClientSocket(buffer,8091);
 	if(sockFd == -1){
-		LOG_ERROR("Unable to connect with client");
+		LOG_ERROR("Unable to connect with music clients for downloading data");
+		postFileTransferStatus(newRmMsg);
+		return NULL;
+	}
+	if(setSocketBlockingEnabled(sockFd,0) != G_OK)
+	{
+		LOG_ERROR("Unable to set socket non blocking");
 		postFileTransferStatus(newRmMsg);
 		return NULL;
 	}
@@ -235,19 +260,20 @@ void *getMP3FileFromClient(void *msg)
 		return NULL;
 	}
 	u32 currentRead = 0;
+	u32 tempRead = 0;
 	while(totalRead < fileSize){
 		currentRead = ((fileSize - totalRead) >= 4096)?4096:(fileSize - totalRead);
-		currentRead = receiveData(sockFd,currentRead,buffer);
-		if(currentRead == 0)
+		tempRead= receiveData(sockFd,currentRead,buffer);
+		if(tempRead != currentRead)
 		{
-			LOG_WARN("Read return 0 bytes Total Read %u",totalRead);
+			LOG_ERROR("File download fail, Totalread %u requested %u received %u",totalRead, currentRead, tempRead);
 			close(fd);
 			closeSocket(sockFd);
 			postFileTransferStatus(newRmMsg);
-			break;
+			return NULL;
 		}
-		write(fd,buffer,currentRead);
-		totalRead += currentRead;
+		write(fd,buffer,tempRead);
+		totalRead += tempRead;
 	}
 	close(fd);
 	closeSocket(sockFd);
