@@ -159,6 +159,7 @@ static RESULT deregisterClientFunc(CLIENT_DB *cdb, clntid_t id)
 static RESULT addToClientQueueFunc(CLIENT_DB *cdb,clntid_t id,u32 token,void *msg,u32 size)
 {
 	RESULT res = G_ERR;
+	void *data = NULL;
 	if(!msg || !cdb || (id >= MAX_CLIENT) || (cdb->clientState[id] == clnt_unregister_state) )
 	{
 		LOG_ERROR("Error in add to client queue\n");
@@ -166,7 +167,12 @@ static RESULT addToClientQueueFunc(CLIENT_DB *cdb,clntid_t id,u32 token,void *ms
 	}
 
 	//create a copy of user data
-	void *data = malloc(size);
+	data = malloc(size);
+	if(data == NULL)
+	{
+		LOG_ERROR("Malloc failed");
+		return res;
+	}
 	memcpy(data,msg,size);
 	res = cdb->playList->addToPlayList(cdb->playList,id,token,data,size);
 	if(res != G_OK)
@@ -347,6 +353,7 @@ static RESULT setPlayingStatusFunc(CLIENT_DB *cdb)
 		LOG_ERROR("Error in deleting played record");
 	}
 	unlink(cdb->schData[i].fileName);
+	cdb->clientState[cdb->schData[i].clientId] = clnt_registered_state;
 	LOG_MSG("Successfully Played %s",cdb->schData[i].fileName);
 	return G_OK;
 

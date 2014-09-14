@@ -151,7 +151,6 @@ RESULT downlaodingCheck(void *data)
 		free(plD->data);
 		return G_OK;
 	}
-
 	return G_FAIL;
 }
 
@@ -164,7 +163,6 @@ RESULT playingCheck(void *data)
 		free(plD->data);
 		return G_OK;
 	}
-
 	return G_FAIL;
 }
 
