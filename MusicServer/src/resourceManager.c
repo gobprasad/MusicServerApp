@@ -160,6 +160,7 @@ static void servRequest(RManager *rm, rmMsg_t * rmsg)
 
 static void servClientRequest(clntMsg_t *msg)
 {
+	int isRegisterMsg = 0;
 	if(!msg){
 		LOG_ERROR("clntMsg_t is null");
 		return;
@@ -172,7 +173,7 @@ static void servClientRequest(clntMsg_t *msg)
 		LOG_ERROR("CLIENT_DB is null");
 		msg->clntData.header.msgId = resErr_m;
 		//Post message to threadPool Queue
-		addJobToQueue(sendNACKandClose, (void *)msg);
+		sendNACKandClose((void *)msg);
 		return;
 	}
 	
@@ -185,7 +186,7 @@ static void servClientRequest(clntMsg_t *msg)
 			{
 				msg->clntData.header.msgId = resErr_m;
 				//Post message to threadPool Queue
-				addJobToQueue(sendNACKandClose, (void *)msg);
+				sendNACKandClose((void *)msg);
 				return;
 			}
 			memset(clntInfo.clientName,0,MAX_CLIENT_NAME);
@@ -202,14 +203,14 @@ static void servClientRequest(clntMsg_t *msg)
 			{
 				msg->clntData.header.msgId = resErr_m;
 				//Post message to threadPool Queue
-				addJobToQueue(sendNACKandClose, (void *)msg);
+				sendNACKandClose((void *)msg);
 				return;
 			}
 			// Copy the clntId returned by ClientDb and return to client
 			// All the subsequent messages will be identified by this Id only
 			msg->clntData.header.msgId = resOk_m;
 			msg->clntData.header.clntId = clntInfo.clientId;
-			
+			isRegisterMsg = 1;
 			break;
 		case add_m:
 			if(msg->clntData.payLoad == NULL)
@@ -232,8 +233,14 @@ static void servClientRequest(clntMsg_t *msg)
 
 			break;
 	}
-	//Post message to threadPool Queue
-	addJobToQueue(sendACKandClose, (void *)msg);
+	//Send Ack to client and close connection
+	sendACKandClose((void *)msg);
+
+	// if it is register message schedule a update all message
+	if(isRegisterMsg == 1)
+	{
+		addJobToQueue(sendAllUpdateToClient,(void *)&(cdb->clientId[clntInfo.clientId]);
+	}
 }
 
 

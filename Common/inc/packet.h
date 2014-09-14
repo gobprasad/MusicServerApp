@@ -34,6 +34,8 @@ typedef enum
 	update_m,
 	resOk_m,
 	resErr_m,
+	client_update_all,
+	client_update_all_finish,
 	last_m
 }msg_type_t;
 

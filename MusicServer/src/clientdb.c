@@ -27,6 +27,10 @@ static RESULT deleteAllDataOfClient(CLIENT_DB *cdb,clntid_t id);
 static RESULT setClientStateActive(CLIENT_DB *cdb, clntid_t id);
 //static RESULT sendUpdateToClient(CLIENT_DB *cdb, clntid_t id);
 
+static RESULT sendOneUpdate(clntData_t *data, int sockFd);
+static RESULT connectToClient(char clientId, int *sockFd);
+
+
 
 /**
  * Get Client DB instance Singleton
@@ -351,3 +355,139 @@ static RESULT deleteAllDataOfClient(CLIENT_DB *cdb,clntid_t id)
 	return G_OK;
 }
 
+void * sendAllUpdateToClient(void *data)
+{
+	int i = 0, j = 0;
+	char isClientConnected = 0;
+	int sockFd = 0;
+	RESULT sendResult = G_FAIL;
+	char clientId = *((char*)data);
+	clntData_t clntData;
+	CLIENT_DB *cdb = getClientDbInstance();
+	if(!cdb)
+	{
+		LOG_ERROR("Error in client db instance");
+		return;
+	}
+	if(clientId >= MAX_CLIENT)
+	{
+		LOG_ERROR("Invalid client Id, clntId =%d",clientId);
+		return NULL;
+	}
+	if(cdb->clientState[clientId] == clnt_unregister_state)
+	{
+		LOG_ERROR("Client is already de registered, clntId =%d",clientId);
+		return NULL;
+	}
+	PLAYLIST *pl = cdb->playList;
+	// LOCK the playlist
+	pthread_mutex_lock(&pl->playListLock);
+	if(pl->playListSize <= 0)
+	{
+		LOG_MSG("Playlist is empty, nothing to update");
+		pthread_mutex_unlock(&pl->playListLock);
+		return NULL;
+	}
+	LIST_NODE *tempNode = NULL;
+	for(i=0; i<MAX_CLIENT; i++)
+	{
+		// skip current client and unregistered client
+		if((cdb->clientState[clientId] == clnt_unregister_state) || (i == clientId))
+			continue;
+
+		//skip client having not data
+		if(pl->pList[i]->totalNode == 0)
+		{
+			continue;
+		}
+		tempNode = pl->pList[i].first;
+		for(j=0; j<pl->pList[i]->totalNode; j++)
+		{
+			// create client message;
+			clntData.header.clntId = clientId;
+			clntData.header.msgId  = client_update_all;
+			clntData.header.isLast = 0;
+			clntData.header.token  = getNewToken();
+			clntData.header.totalSize = 0;
+			clntData.payLoad  = (PlayListData*(tempNode->data))->data;
+			clntData.payloadSize = (PlayListData*(tempNode->data))->size;
+			
+			//if client is not connected connect with it
+			if(!isClientConnected)
+			{
+				if(connectToClient(clientId, &sockFd) != G_OK)
+				{
+					LOG_ERROR("Unable to connect with client for sending update");
+					break;
+				}
+				isClientConnected = 1;
+			}
+			if((sendResult = sendOneUpdate(&clntData, *sockFd)) != G_OK)
+			{
+				LOG_ERROR("Sending update all fail");
+				break;
+			}
+			tempNode = tempNode->next;
+		}
+		if(sendResult != G_OK)
+		{
+			break;
+		}
+	}
+	if(isClientConnected)
+	{
+		closeSocket(sockFd);
+	}
+	pthread_mutex_unlock(&pl->playListLock);
+	
+}
+
+static RESULT sendOneUpdate(clntData_t *data, int sockFd)
+{
+	RESULT res = G_FAIL;
+	u32 size = 0;
+	char *buffer = NULL;
+	if(!data)
+	{
+		LOG_ERROR("update data is null");
+		return res;
+	}
+	if((size = encodePacket(data,&buffer)) <=0)
+	{
+		LOG_ERROR("Error in encoding");
+		return res;
+	}
+	if(sendData(sockFd,size,buffer) < size)
+	{
+		LOG_ERROR("Unable to send update message");
+		free(buffer);
+		return res;
+	}
+	if(buffer != NULL)
+		free(buffer);
+
+	return G_OK;
+}
+
+
+
+static RESULT connectToClient(char clientId, int *sockFd)
+{
+	char buffer[64] = {0};
+	CLIENT_DB *cdb = getClientDbInstance();
+	struct in_addr addr = {cdb->clientIP[clientId]};
+	sprintf(buffer, "%s", inet_ntoa( addr ) );
+	LOG_MSG("Connecting to client for sending update %s",buffer);
+	
+	*sockFd = createClientSocket(buffer,8091);
+	if(*sockFd == -1){
+		LOG_ERROR("Unable to connect with client for sending update");
+		return G_FAIL;
+	}
+	if(setSocketBlockingEnabled(*sockFd,1) != G_OK)
+	{
+		LOG_ERROR("Unable to set socket non blocking");
+		return NULL;
+	}
+	return G_OK;
+}

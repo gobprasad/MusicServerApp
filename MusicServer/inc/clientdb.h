@@ -59,8 +59,9 @@ typedef struct clientDb
 	RESULT (*setDownloadingStatus)(struct clientDb *, MP3_FILE_REQ *);
 	RESULT (*getClientRequestForPlaying)(struct clientDb *, char *);
 	RESULT (*setPlayingStatus)(struct clientDb *);
-
 }CLIENT_DB;
 
 CLIENT_DB *getClientDbInstance();
+void * sendAllUpdateToClient(void *data);
+
 #endif // __CLIENT_DB_H__
