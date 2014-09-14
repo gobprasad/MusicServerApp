@@ -135,7 +135,6 @@ static RESULT getOneForPlaying(PLAYLIST *pl,clntid_t *clientId, u32 *pltoken)
 	{
 		*pltoken  = respClnt->token;
 		*clientId = respClnt->id;
-		pl->currentPlayingClient = respClnt->id;
 		respClnt->plStatus = PL_PLAYING;
 		pl->currentPlayingClient = respClnt->id;
 	}
@@ -259,6 +258,8 @@ static RESULT setPlayListStatus(PLAYLIST *pl,clntid_t clientId,PL_STATE state)
 		if(currData->plStatus == currState)
 		{
 			currData->plStatus = state;
+			pl->currentPlayingClient = clientId;
+			LOG_MSG("Setting playlist status %d",state);
 			res = G_OK;
 			break;
 		}

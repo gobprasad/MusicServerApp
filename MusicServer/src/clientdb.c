@@ -1,6 +1,7 @@
 #include "clientdb.h"
 #include "results.h"
 #include "loggingFrameWork.h"
+#include <netinet/in.h>
 
 static CLIENT_DB *clientDBinstance = NULL;
 static void initClientDb(CLIENT_DB *cdb);
@@ -341,7 +342,10 @@ static RESULT setPlayingStatusFunc(CLIENT_DB *cdb)
 		return res;
 	}
 	cdb->schData[i].status = PL_NONE;
-	cdb->playList->deletePlaying(cdb->playList);
+	if(cdb->playList->deletePlaying(cdb->playList) != G_OK)
+	{
+		LOG_ERROR("Error in deleting played record");
+	}
 	unlink(cdb->schData[i].fileName);
 	LOG_MSG("Successfully Played %s",cdb->schData[i].fileName);
 	return G_OK;
@@ -396,12 +400,12 @@ void * sendAllUpdateToClient(void *data)
 			continue;
 
 		//skip client having not data
-		if(pl->pList[i]->totalNode == 0)
+		if(pl->pList[i].totalNode == 0)
 		{
 			continue;
 		}
 		tempNode = pl->pList[i].first;
-		for(j=0; j<pl->pList[i]->totalNode; j++)
+		for(j=0; j<pl->pList[i].totalNode; j++)
 		{
 			// create client message;
 			clntData.header.clntId = clientId;
@@ -409,8 +413,8 @@ void * sendAllUpdateToClient(void *data)
 			clntData.header.isLast = 0;
 			clntData.header.token  = getNewToken();
 			clntData.header.totalSize = 0;
-			clntData.payLoad  = (PlayListData*(tempNode->data))->data;
-			clntData.payloadSize = (PlayListData*(tempNode->data))->size;
+			clntData.payLoad  = ((PlayListData*)(tempNode->data))->data;
+			clntData.payloadSize = ((PlayListData*)(tempNode->data))->size;
 			
 			//if client is not connected connect with it
 			if(!isClientConnected)
@@ -422,12 +426,14 @@ void * sendAllUpdateToClient(void *data)
 				}
 				isClientConnected = 1;
 			}
-			if((sendResult = sendOneUpdate(&clntData, *sockFd)) != G_OK)
+			if((sendResult = sendOneUpdate(&clntData, sockFd)) != G_OK)
 			{
 				LOG_ERROR("Sending update all fail");
 				break;
 			}
 			tempNode = tempNode->next;
+			clntData.payLoad = NULL;
+			clntData.payloadSize = 0;
 		}
 		if(sendResult != G_OK)
 		{
@@ -487,7 +493,7 @@ static RESULT connectToClient(char clientId, int *sockFd)
 	if(setSocketBlockingEnabled(*sockFd,1) != G_OK)
 	{
 		LOG_ERROR("Unable to set socket non blocking");
-		return NULL;
+		return G_FAIL;
 	}
 	return G_OK;
 }

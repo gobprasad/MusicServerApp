@@ -149,13 +149,13 @@ static void servRequest(RManager *rm, rmMsg_t * rmsg)
 			LOG_ERROR("default case");
 			break;
 	}
-	LOG_MSG("RM CURRENT STATE %d",rm->rmState);
 	// Run the state machine on any msg received
 	if( rm->rmRunState[rm->rmState][rmsg->msgId] != NULL)
 	{
 		rm->rmRunState[rm->rmState][rmsg->msgId](rm,rmsg);
 	}
 	free(rmsg);
+	LOG_MSG("RM CURRENT STATE %d",rm->rmState);
 }
 
 static void servClientRequest(clntMsg_t *msg)
@@ -239,7 +239,7 @@ static void servClientRequest(clntMsg_t *msg)
 	// if it is register message schedule a update all message
 	if(isRegisterMsg == 1)
 	{
-		addJobToQueue(sendAllUpdateToClient,(void *)&(cdb->clientId[clntInfo.clientId]);
+		addJobToQueue(sendAllUpdateToClient,(void *)&(cdb->clientId[clntInfo.clientId]));
 	}
 }
 
@@ -282,6 +282,7 @@ static void moveToPlaying(RManager *rm, rmMsg_t *rmsg)
 	switch(rm->rmState)
 	{
 		case rm_Downloading:
+		case rm_Playing_Downloaded:
 			if(cdb->getClientRequestForPlaying(cdb,&mp->fileName) != G_OK)
 			{
 				LOG_ERROR("File is not ready for Playing");
@@ -299,9 +300,8 @@ static void moveToPlaying(RManager *rm, rmMsg_t *rmsg)
 			callSchedular(rm,rmsg);
 			break;
 		case rm_Playing_Downloading:
-		case rm_Playing_Downloaded:
-			rm->rmState = rm_Playing;
-			callSchedular(rm,rmsg);
+			rm->rmState = rm_Downloading;
+			//callSchedular(rm,rmsg);
 			break;
 
 		default:
@@ -327,11 +327,12 @@ static void callSchedular(RManager *rm, rmMsg_t *rmsg)
 		LOG_ERROR("Client DB instance is NULL"); 
 		return;
 	}
-	
-	MP3_FILE_REQ *mp3Req = (MP3_FILE_REQ*)malloc(sizeof(MP3_FILE_REQ));
+
+	MP3_FILE_REQ *mp3Req = (MP3_FILE_REQ*)malloc(sizeof(MP3_FILE_REQ));	
 	if(cdb->getClientRequestForDownloading(cdb,mp3Req) != G_OK)
 	{
 		LOG_MSG("No Client to schedule");
+		free(mp3Req);
 		return;
 	}
 	switch(rm->rmState){
