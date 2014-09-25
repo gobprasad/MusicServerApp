@@ -34,6 +34,8 @@ typedef enum
 	update_m,
 	resOk_m,
 	resErr_m,
+	getFile_m,
+	client_delete_req_m,
 	client_update_all,
 	client_update_all_finish,
 	last_m

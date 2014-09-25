@@ -30,6 +30,9 @@ static RESULT setClientStateActive(CLIENT_DB *cdb, clntid_t id);
 
 static RESULT sendOneUpdate(clntData_t *data, int sockFd);
 static RESULT connectToClient(char clientId, int *sockFd);
+static void sendDeleteOneToClient(char clientId, u32 m_token);
+static clntData_t *createClientMsg(char clntId, u32 m_token, msg_type_t id);
+
 
 
 
@@ -295,6 +298,7 @@ static RESULT setDownloadingStatusFunc(CLIENT_DB *cdb, MP3_FILE_REQ *resp)
 			cdb->playList->deleteDownloading(cdb->playList);
 			LOG_MSG("File %s download Error",resp->fileName);
 			unlink(resp->fileName);
+			sendDeleteOneToClient(cdb->schData[i].clientId, cdb->schData[i].reqToken);
 			break;
 		default:
 			LOG_ERROR("File Download default case");
@@ -355,6 +359,7 @@ static RESULT setPlayingStatusFunc(CLIENT_DB *cdb)
 	unlink(cdb->schData[i].fileName);
 	cdb->clientState[cdb->schData[i].clientId] = clnt_registered_state;
 	LOG_MSG("Successfully Played %s",cdb->schData[i].fileName);
+	sendDeleteOneToClient(cdb->schData[i].clientId, cdb->schData[i].reqToken);
 	return G_OK;
 
 }
@@ -455,6 +460,29 @@ void * sendAllUpdateToClient(void *data)
 	
 }
 
+
+static void sendDeleteOneToClient(char clientId, u32 m_token)
+{
+	int sockFd = 0;
+	clntData_t *data = NULL;
+	data = createClientMsg(clientId,m_token,client_delete_req_m);
+	if(connectToClient(clientId,&sockFd) != G_OK)
+	{
+		LOG_ERROR("Unable to connect to client");
+		free(data);
+		return;
+	}
+
+	if(sendOneUpdate(data,sockFd) != G_OK)
+	{
+		LOG_ERROR("Unable to send delete message to client");
+		free(data);
+		closeSocket(sockFd);
+	}
+	free(data);
+	closeSocket(sockFd);
+}
+
 static RESULT sendOneUpdate(clntData_t *data, int sockFd)
 {
 	RESULT res = G_FAIL;
@@ -504,3 +532,21 @@ static RESULT connectToClient(char clientId, int *sockFd)
 	}
 	return G_OK;
 }
+
+
+static clntData_t *createClientMsg(char clntId, u32 m_token, msg_type_t id)
+{
+	clntData_t *clntMessage = NULL;
+	clntMessage = (clntData_t *)malloc(sizeof(clntData_t));
+	clntMessage->header.clntId     = clntId;
+  	clntMessage->header.token      = m_token;
+  	clntMessage->header.totalSize  = 0;
+  	clntMessage->header.msgId      = id;
+  	clntMessage->header.isLast     = 1;
+  	clntMessage->header.signature  = SIGNATURE;
+  	clntMessage->payLoad           = NULL;
+  	clntMessage->payloadSize       = 0;
+
+	return clntMessage;
+}
+

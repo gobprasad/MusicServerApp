@@ -61,7 +61,7 @@ RESULT decodePacket(clntData_t *msg, uchar *buf, u32 size)
     tempSize = size - DECODED_HEADER_SIZE; /*Not a magic number, size after header */
 	if( tempSize > 0 )
 	{
-        msg->payLoad = (uchar *)malloc(tempSize+1);
+        msg->payLoad = (uchar *)malloc(tempSize);
 		if(msg->payLoad == NULL)
 		{
 			printf("[%s : %d] : Error in Packet decoding\n",__FUNCTION__,__LINE__);
@@ -69,8 +69,8 @@ RESULT decodePacket(clntData_t *msg, uchar *buf, u32 size)
 			return G_FAIL;
 		}
 		memcpy(msg->payLoad,buf+DECODED_HEADER_SIZE,tempSize);
-		memset(msg->payLoad+tempSize+1,0,1); //NULL Terminated string
-        msg->payloadSize = tempSize+1;
+		//memset(msg->payLoad+tempSize+1,0,1); //NULL Terminated string
+        msg->payloadSize = tempSize;
 	}
 	return G_OK;
 }

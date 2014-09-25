@@ -181,11 +181,13 @@ void *getMP3FileFromClient(void *msg)
 {
 	int sockFd = -1;
 	uchar buffer[4096];
+	uchar *reqBuffer = NULL;
 	char clntSig = CLNT_SIGNATURE;
 	u32 fileSize = 0;
 	u32 totalRead = 0;
 	int fd  = -1;
 	u32 reqID = 0;
+	cli
 
 	// create new message for Resource Manager
 	rmMsg_t *newRmMsg = (rmMsg_t *)malloc(sizeof(rmMsg_t));
@@ -224,17 +226,39 @@ void *getMP3FileFromClient(void *msg)
 		postFileTransferStatus(newRmMsg);
 		return NULL;
 	}
+	/*
 	memcpy(buffer,&clntSig,1);
 	memcpy(buffer+1,&req->clntId,1);
 	reqID = htonl(req->requestId);
 	memcpy(buffer+2,&reqID,4);
-	if(sendData(sockFd,6,buffer) < 6)
+	*/
+	clntData_t clntMessage;
+	u32 reqSize = 0;
+  	clntMessage.header.clntId     = req->clntId;
+  	clntMessage.header.token      = req->requestId;
+  	clntMessage.header.totalSize  = 0;
+  	clntMessage.header.msgId      = getFile_m;
+  	clntMessage.header.isLast     = 1;
+  	clntMessage.header.signature  = SIGNATURE;
+  	clntMessage.payLoad           = NULL;
+  	clntMessage.payloadSize       = 0;
+	if( (reqSize = encodePacket(&clntMessage,&reqBuffer)) <= 0)
 	{
-		LOG_ERROR("Unable to send");
+		LOG_ERROR("Unable to encode packet for file downloading");
 		postFileTransferStatus(newRmMsg);
 		closeSocket(sockFd);
 		return NULL;
 	}
+	
+	if(sendData(sockFd,reqSize,reqBuffer) < reqSize)
+	{
+		LOG_ERROR("Unable to send");
+		postFileTransferStatus(newRmMsg);
+		closeSocket(sockFd);
+		free(reqBuffer);
+		return NULL;
+	}
+	free(reqBuffer);
 	if(receiveData(sockFd,4,(char*)&fileSize) < 4)
 	{
 		LOG_ERROR("Unable to receive \n");

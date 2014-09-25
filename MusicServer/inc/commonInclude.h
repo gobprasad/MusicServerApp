@@ -7,6 +7,4 @@ typedef char clntid_t;
 #define DOWNLOAD_FILE_NAME_SIZE	64
 #define PLAY_FILE_NAME			"/tmp/clientReq"
 
-
-
 #endif
