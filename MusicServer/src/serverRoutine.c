@@ -187,7 +187,6 @@ void *getMP3FileFromClient(void *msg)
 	u32 totalRead = 0;
 	int fd  = -1;
 	u32 reqID = 0;
-	cli
 
 	// create new message for Resource Manager
 	rmMsg_t *newRmMsg = (rmMsg_t *)malloc(sizeof(rmMsg_t));
@@ -226,12 +225,6 @@ void *getMP3FileFromClient(void *msg)
 		postFileTransferStatus(newRmMsg);
 		return NULL;
 	}
-	/*
-	memcpy(buffer,&clntSig,1);
-	memcpy(buffer+1,&req->clntId,1);
-	reqID = htonl(req->requestId);
-	memcpy(buffer+2,&reqID,4);
-	*/
 	clntData_t clntMessage;
 	u32 reqSize = 0;
   	clntMessage.header.clntId     = req->clntId;

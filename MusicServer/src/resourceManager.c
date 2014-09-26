@@ -27,7 +27,7 @@ static void printRMStateError(RManager *rm, rmMsg_t * rmsg);
 static void moveToIdle(RManager *rm, rmMsg_t * rmsg);
 static void moveToDownloading(RManager *rm, rmMsg_t * rmsg);
 static void moveToPlaying(RManager *rm, rmMsg_t * rmsg);
-static void moveToPlayingDownloading(RManager *rm, rmMsg_t * rmsg);
+static void moveToPlayingScheduleNext(RManager *rm, rmMsg_t * rmsg);
 static void moveToPlayingDownloaded(RManager *rm, rmMsg_t * rmsg);
 static void callSchedular(RManager *rm, rmMsg_t * rmsg);
 //State Machine Functions
@@ -81,7 +81,7 @@ static void initRmManager(RManager *rm)
 	rm->rmRunState[rm_Playing_Downloading][rm_mplayerStop_m] = printRMStateError;
 	rm->rmRunState[rm_Playing_Downloading][rm_mplayerErr_m]  = moveToDownloading; // Move to rmDownloading
 	rm->rmRunState[rm_Playing_Downloading][rm_dw_complete_m] = moveToPlayingDownloaded; // Move to Downloaded
-	rm->rmRunState[rm_Playing_Downloading][rm_dw_err_m]      = moveToPlaying;// Move to playing; call schedular for next song
+	rm->rmRunState[rm_Playing_Downloading][rm_dw_err_m]      = moveToPlayingScheduleNext// Move to playing; call schedular for next song
 
 	rm->rmRunState[rm_Playing_Downloaded][rm_clntMsg_m]     = NULL;
 	rm->rmRunState[rm_Playing_Downloaded][rm_mplayerDone_m] = moveToPlaying; // send to MusicPlayer; move to playing
@@ -309,9 +309,11 @@ static void moveToPlaying(RManager *rm, rmMsg_t *rmsg)
 			break;
 	}	
 }
-static void moveToPlayingDownloading(RManager *rm, rmMsg_t * rmsg)
+
+static void moveToPlayingScheduleNext(RManager *rm, rmMsg_t * rmsg)
 {
-	rm->rmState = rm_Playing_Downloading;
+	rm->rmState = rm_Playing;
+	callSchedular(rm,rmsg);
 }
 static void moveToPlayingDownloaded(RManager *rm, rmMsg_t * rmsg)
 {
