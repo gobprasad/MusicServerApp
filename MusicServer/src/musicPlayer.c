@@ -63,6 +63,7 @@ static void *playSong(void *arg)
 		while (mpg123_read(mp->mh, mp->buffer, mp->buffer_size, &done) == MPG123_OK){
 			if(mp->stop == 1){
 				rmMsg->msgId = rm_mplayerStop_m;
+				mp->stop = 0;
 				break;
 			}
 			ao_play(dev, mp->buffer, done);

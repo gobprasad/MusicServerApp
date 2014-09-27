@@ -200,6 +200,7 @@ void *getMP3FileFromClient(void *msg)
 	u32 totalRead = 0;
 	int fd  = -1;
 	u32 reqID = 0;
+	CLIENT_DB *cdb = getClientDbInstance();
 
 	// create new message for Resource Manager
 	rmMsg_t *newRmMsg = (rmMsg_t *)malloc(sizeof(rmMsg_t));
@@ -229,6 +230,7 @@ void *getMP3FileFromClient(void *msg)
 	sockFd = createClientSocket(buffer,8091);
 	if(sockFd == -1){
 		LOG_ERROR("Unable to connect with music clients for downloading data");
+		cdb->deregisterClient(cdb,req->clntId);
 		postFileTransferStatus(newRmMsg);
 		return NULL;
 	}

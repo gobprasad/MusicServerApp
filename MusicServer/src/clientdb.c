@@ -32,6 +32,8 @@ static RESULT sendOneUpdate(clntData_t *data, int sockFd);
 static RESULT connectToClient(char clientId, int *sockFd);
 static void sendDeleteOneToClient(char clientId, u32 m_token);
 static clntData_t *createClientMsg(char clntId, u32 m_token, msg_type_t id);
+static void checkAndDeleteCurrentList(char id);
+
 
 
 
@@ -149,6 +151,7 @@ static RESULT deregisterClientFunc(CLIENT_DB *cdb, clntid_t id)
 		LOG_ERROR("Client is already de registered, clntId =%d",id);
 		return G_FAIL;
 	}
+	checkAndDeleteCurrentList(id);
 	deleteAllDataOfClient(cdb,id);
 	memset(cdb->clientName[id],0,MAX_CLIENT_NAME+1);
 	cdb->clientIP[id] = 0;
@@ -474,6 +477,7 @@ static void sendDeleteOneToClient(char clientId, u32 m_token)
 {
 	int sockFd = 0;
 	clntData_t *data = NULL;
+	CLIENT_DB *cdb = getClientDbInstance();
 	data = createClientMsg(clientId,m_token,client_delete_req_m);
 	if(connectToClient(clientId,&sockFd) != G_OK)
 	{
@@ -532,6 +536,7 @@ static RESULT connectToClient(char clientId, int *sockFd)
 	*sockFd = createClientSocket(buffer,8091);
 	if(*sockFd == -1){
 		LOG_ERROR("Unable to connect with client for sending update");
+		cdb->deregisterClient(cdb,clientId);
 		return G_FAIL;
 	}
 	if(setSocketBlockingEnabled(*sockFd,1) != G_OK)
@@ -592,6 +597,7 @@ void *sendOneUpdateToAllClient(void *msg)
 		if(connectToClient(i, &sockFd) != G_OK)
 		{
 			LOG_ERROR("Unable to connect with client for sending update");
+			cdb->deregisterClient(cdb,i);
 			continue;
 		}
 		if(sendOneUpdate(reqMsg, sockFd) != G_OK)
@@ -604,5 +610,41 @@ void *sendOneUpdateToAllClient(void *msg)
 		free(reqMsg->payLoad);
 
 	free(reqMsg);
+}
+
+static void checkAndDeleteCurrentList(char id)
+{
+	CLIENT_DB *cdb = getClientDbInstance();
+	MPlayer *mPlayer = getMPlayerInstance();
+	if(cdb->schData[0].clientId == id )
+	{
+		switch(cdb->schData[0].status)
+		{
+			case PL_PLAYING:
+				mPlayer->stop = 1;
+				break;
+			case PL_READY:
+				cdb->schData[0].status   = PL_NONE;
+				unlink(cdb->schData[0].fileName);
+				break;
+			default:
+				break;
+		}
+	}
+	if(cdb->schData[1].clientId == id )
+	{
+		switch(cdb->schData[1].status)
+		{
+			case PL_PLAYING:
+				mPlayer->stop = 1;
+				break;
+			case PL_READY:
+				cdb->schData[1].status   = PL_NONE;
+				unlink(cdb->schData[1].fileName);
+				break;
+			default:
+				break;
+		}
+	}
 }
 
