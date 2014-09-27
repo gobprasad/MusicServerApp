@@ -2,6 +2,8 @@
 #include "results.h"
 #include "loggingFrameWork.h"
 #include <netinet/in.h>
+#include "musicPlayer.h"
+
 
 static CLIENT_DB *clientDBinstance = NULL;
 static void initClientDb(CLIENT_DB *cdb);
@@ -156,6 +158,8 @@ static RESULT deregisterClientFunc(CLIENT_DB *cdb, clntid_t id)
 	memset(cdb->clientName[id],0,MAX_CLIENT_NAME+1);
 	cdb->clientIP[id] = 0;
 	cdb->clientState[id] = clnt_unregister_state;
+	clntData_t *msg = createClientMsg(id,0,client_deleteAllDataId_m);
+	addJobToQueue(sendOneUpdateToAllClient, (void *)msg);
 	
 	return G_OK;
 }

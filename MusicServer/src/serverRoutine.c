@@ -3,6 +3,8 @@
 #include "server.h"
 #include "packet.h"
 #include "results.h"
+#include "clientdb.h"
+
 #include <stdio.h>
 
 #include <sys/types.h>

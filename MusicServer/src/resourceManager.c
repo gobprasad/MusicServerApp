@@ -71,21 +71,21 @@ static void initRmManager(RManager *rm)
 
 	rm->rmRunState[rm_Playing][rm_clntMsg_m]     = callSchedular;
 	rm->rmRunState[rm_Playing][rm_mplayerDone_m] = moveToIdle;// Move to Idle
-	rm->rmRunState[rm_Playing][rm_mplayerStop_m] = printRMStateError;
+	rm->rmRunState[rm_Playing][rm_mplayerStop_m] = moveToIdle;
 	rm->rmRunState[rm_Playing][rm_mplayerErr_m]  = moveToIdle;
 	rm->rmRunState[rm_Playing][rm_dw_complete_m] = printRMStateError;
 	rm->rmRunState[rm_Playing][rm_dw_err_m]      = printRMStateError;
 
 	rm->rmRunState[rm_Playing_Downloading][rm_clntMsg_m]     = NULL;
 	rm->rmRunState[rm_Playing_Downloading][rm_mplayerDone_m] = moveToDownloading;
-	rm->rmRunState[rm_Playing_Downloading][rm_mplayerStop_m] = printRMStateError;
+	rm->rmRunState[rm_Playing_Downloading][rm_mplayerStop_m] = moveToDownloading;
 	rm->rmRunState[rm_Playing_Downloading][rm_mplayerErr_m]  = moveToDownloading; // Move to rmDownloading
 	rm->rmRunState[rm_Playing_Downloading][rm_dw_complete_m] = moveToPlayingDownloaded; // Move to Downloaded
 	rm->rmRunState[rm_Playing_Downloading][rm_dw_err_m]      = moveToPlayingScheduleNext;// Move to playing; call schedular for next song
 
 	rm->rmRunState[rm_Playing_Downloaded][rm_clntMsg_m]     = NULL;
 	rm->rmRunState[rm_Playing_Downloaded][rm_mplayerDone_m] = moveToPlaying; // send to MusicPlayer; move to playing
-	rm->rmRunState[rm_Playing_Downloaded][rm_mplayerStop_m] = printRMStateError;
+	rm->rmRunState[rm_Playing_Downloaded][rm_mplayerStop_m] = moveToPlaying;
 	rm->rmRunState[rm_Playing_Downloaded][rm_mplayerErr_m]  = moveToPlaying; //send to MusicPlayer; move to playing
 	rm->rmRunState[rm_Playing_Downloaded][rm_dw_complete_m] = printRMStateError;
 	rm->rmRunState[rm_Playing_Downloaded][rm_dw_err_m]      = printRMStateError;
@@ -217,7 +217,7 @@ static void servClientRequest(clntMsg_t *msg)
 			addJobToQueue(sendAllUpdateToClient,(void *)&(cdb->clientId[clntInfo.clientId]));
 			break;
 		case add_m:
-			LOG_MSG("register clnt request");
+			LOG_MSG("add_m clnt request");
 			if(msg->clntData.payLoad == NULL)
 			{
 				msg->clntData.header.msgId = resErr_m;
