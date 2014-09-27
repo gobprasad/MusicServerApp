@@ -256,6 +256,10 @@ static void servClientRequest(clntMsg_t *msg)
 		case delete_m:
 
 			break;
+		default:
+			LOG_ERROR("FATAL Error Unknown Msg Id");
+			sendNACKandClose((void *) msg);
+			break;
 	}
 	
 }
