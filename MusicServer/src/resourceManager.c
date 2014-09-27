@@ -81,7 +81,7 @@ static void initRmManager(RManager *rm)
 	rm->rmRunState[rm_Playing_Downloading][rm_mplayerStop_m] = printRMStateError;
 	rm->rmRunState[rm_Playing_Downloading][rm_mplayerErr_m]  = moveToDownloading; // Move to rmDownloading
 	rm->rmRunState[rm_Playing_Downloading][rm_dw_complete_m] = moveToPlayingDownloaded; // Move to Downloaded
-	rm->rmRunState[rm_Playing_Downloading][rm_dw_err_m]      = moveToPlayingScheduleNext// Move to playing; call schedular for next song
+	rm->rmRunState[rm_Playing_Downloading][rm_dw_err_m]      = moveToPlayingScheduleNext;// Move to playing; call schedular for next song
 
 	rm->rmRunState[rm_Playing_Downloaded][rm_clntMsg_m]     = NULL;
 	rm->rmRunState[rm_Playing_Downloaded][rm_mplayerDone_m] = moveToPlaying; // send to MusicPlayer; move to playing
@@ -217,9 +217,11 @@ static void servClientRequest(clntMsg_t *msg)
 			addJobToQueue(sendAllUpdateToClient,(void *)&(cdb->clientId[clntInfo.clientId]));
 			break;
 		case add_m:
+			LOG_MSG("register clnt request");
 			if(msg->clntData.payLoad == NULL)
 			{
 				msg->clntData.header.msgId = resErr_m;
+				LOG_ERROR("PayLoad is NULL");
 				sendNACKandClose((void *)msg);
 				return;
 			}
@@ -227,6 +229,7 @@ static void servClientRequest(clntMsg_t *msg)
 			if( cdb->addToQueue(cdb,msg->clntData.header.clntId,msg->clntData.header.token,msg->clntData.payLoad,msg->clntData.payloadSize) != G_OK)
 			{
 				msg->clntData.header.msgId = resErr_m;
+				LOG_ERROR("Error in addToQueue");
 				sendNACKandClose((void *)msg);
 				return;
 			}
