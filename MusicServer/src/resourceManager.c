@@ -210,21 +210,42 @@ static void servClientRequest(clntMsg_t *msg)
 			// All the subsequent messages will be identified by this Id only
 			msg->clntData.header.msgId = resOk_m;
 			msg->clntData.header.clntId = clntInfo.clientId;
-			isRegisterMsg = 1;
+			//Send Ack to client and close connection
+			sendACKandClose((void *)msg);
+
+			// send playlist update to current client
+			addJobToQueue(sendAllUpdateToClient,(void *)&(cdb->clientId[clntInfo.clientId]));
 			break;
 		case add_m:
 			if(msg->clntData.payLoad == NULL)
 			{
 				msg->clntData.header.msgId = resErr_m;
-				break;
+				sendNACKandClose((void *)msg);
+				return;
 			}
 			clntMusicData.requestId = msg->clntData.header.token;
 			if( cdb->addToQueue(cdb,msg->clntData.header.clntId,msg->clntData.header.token,msg->clntData.payLoad,msg->clntData.payloadSize) != G_OK)
 			{
 				msg->clntData.header.msgId = resErr_m;
-				break;
+				sendNACKandClose((void *)msg);
+				return;
 			}
 			msg->clntData.header.msgId = resOk_m;
+
+			//Create a copy of request msg and send to all connected clients.
+			clntData_t *copyMsg = NULL;
+			copyMsg = (clntData_t*)malloc(sizeof(clntData_t));
+			copyMsg->header.msgId = client_add_m;
+			memcpy(copyMsg,&msg->clntData,sizeof(clntData_t));
+			copyMsg->payLoad = (uchar *)malloc(msg->clntData.payloadSize);
+			memcpy(copyMsg->payLoad,msg->clntData.payLoad,msg->clntData.payloadSize);
+			
+			//Send Ack to client and close connection
+			sendACKandClose((void *)msg);
+
+			//send one update to all connected clients
+			addJobToQueue(sendOneUpdateToAllClient,(void *)copyMsg);
+
 			break;
 		case deregister_m:
 
@@ -233,14 +254,7 @@ static void servClientRequest(clntMsg_t *msg)
 
 			break;
 	}
-	//Send Ack to client and close connection
-	sendACKandClose((void *)msg);
-
-	// if it is register message schedule a update all message
-	if(isRegisterMsg == 1)
-	{
-		addJobToQueue(sendAllUpdateToClient,(void *)&(cdb->clientId[clntInfo.clientId]));
-	}
+	
 }
 
 

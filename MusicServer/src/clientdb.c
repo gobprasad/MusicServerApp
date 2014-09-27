@@ -165,7 +165,7 @@ static RESULT addToClientQueueFunc(CLIENT_DB *cdb,clntid_t id,u32 token,void *ms
 	void *data = NULL;
 	if(!msg || !cdb || (id >= MAX_CLIENT) || (cdb->clientState[id] == clnt_unregister_state) )
 	{
-		LOG_ERROR("Error in add to client queue\n");
+		LOG_ERROR("Error in add to client queue clntId = %d, clntState %d\n", id, cdb->clientState[id]);
 		return G_FAIL;
 	}
 
@@ -334,6 +334,8 @@ static RESULT getClientRequestForPlayingFunc(CLIENT_DB *cdb, char **playFile)
 		LOG_ERROR("Unable to set Playing status in playList");
 	}
 	setClientStateActive(cdb,cdb->schData[i].clientId);
+	clntData_t *msg = createClientMsg(cdb->schData[i].clientId,cdb->schData[i].reqToken,client_currentPlaying_m);
+	addJobToQueue(sendOneUpdateToAllClient, (void *)msg);
 	return G_OK;
 }
 
@@ -357,9 +359,15 @@ static RESULT setPlayingStatusFunc(CLIENT_DB *cdb)
 		LOG_ERROR("Error in deleting played record");
 	}
 	unlink(cdb->schData[i].fileName);
-	cdb->clientState[cdb->schData[i].clientId] = clnt_registered_state;
-	LOG_MSG("Successfully Played %s",cdb->schData[i].fileName);
-	sendDeleteOneToClient(cdb->schData[i].clientId, cdb->schData[i].reqToken);
+	if(cdb->clientState[cdb->schData[i].clientId] == clnt_active_state)
+	{
+		cdb->clientState[cdb->schData[i].clientId] = clnt_registered_state;
+		LOG_MSG("Successfully Played %s",cdb->schData[i].fileName);
+		sendDeleteOneToClient(cdb->schData[i].clientId, cdb->schData[i].reqToken);
+	} else {
+
+		LOG_ERROR("Client is not Active");
+	}
 	return G_OK;
 
 }
@@ -538,6 +546,11 @@ static clntData_t *createClientMsg(char clntId, u32 m_token, msg_type_t id)
 {
 	clntData_t *clntMessage = NULL;
 	clntMessage = (clntData_t *)malloc(sizeof(clntData_t));
+	if(clntMessage == NULL)
+	{
+		LOG_ERROR("Malloc failed");
+		return NULL;
+	}
 	clntMessage->header.clntId     = clntId;
   	clntMessage->header.token      = m_token;
   	clntMessage->header.totalSize  = 0;
@@ -548,5 +561,47 @@ static clntData_t *createClientMsg(char clntId, u32 m_token, msg_type_t id)
   	clntMessage->payloadSize       = 0;
 
 	return clntMessage;
+}
+
+void *sendOneUpdateToAllClient(void *msg)
+{
+	clntData_t *reqMsg = NULL;
+	reqMsg = (clntData_t*)msg;
+	if(reqMsg == NULL)
+	{
+		LOG_ERROR("Msg is NULL");
+		return;
+	}
+	char i =0;
+	int sockFd = 0;
+	CLIENT_DB *cdb = getClientDbInstance();
+	if(!cdb)
+	{
+		LOG_ERROR("Error in client db instance");
+		return;
+	}	
+	for(i=0; i<MAX_CLIENT; i++)
+	{
+		// skip current client and unregistered client
+		if(cdb->clientState[i] == clnt_unregister_state)
+			continue;
+		if((i == reqMsg->header.clntId) && (reqMsg->header.msgId != client_currentPlaying_m))
+			continue;
+
+		if(connectToClient(i, &sockFd) != G_OK)
+		{
+			LOG_ERROR("Unable to connect with client for sending update");
+			continue;
+		}
+		if(sendOneUpdate(reqMsg, sockFd) != G_OK)
+		{
+			LOG_ERROR("Sending update all fail");
+		}
+		closeSocket(sockFd);
+	}
+	if(reqMsg->payLoad != NULL)
+		free(reqMsg->payLoad);
+
+	free(reqMsg);
 }
 

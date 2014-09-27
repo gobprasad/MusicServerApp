@@ -123,8 +123,21 @@ void *sendNACKandClose(void *arg)
 		LOG_ERROR("Error in sending Nack message");
 	}
 		
-	closeSocket(newClntMsg->clntSockFd);
-	freeClientMsg(newClntMsg);
+	if(buf != NULL)
+		free(buf);
+
+	//if this is last packet from client close the connection or read new packet
+	if(newClntMsg->clntData.header.isLast == 1)
+	{
+		closeSocket(newClntMsg->clntSockFd);
+		freeClientMsg(newClntMsg);
+	} else {
+		
+		if(newClntMsg->clntData.payLoad != NULL)
+			free(newClntMsg->clntData.payLoad);
+		memset(&newClntMsg->clntData,0, sizeof(newClntMsg->clntData));
+		addJobToQueue(handleClient, (void *)newClntMsg);
+	}
 }
 
 void *sendACKandClose(void *arg)
