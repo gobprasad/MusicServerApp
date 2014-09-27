@@ -125,6 +125,7 @@ static RESULT registerClientFunc(CLIENT_DB *cdb, CLIENT_INFO *clntInfo)
 	strncpy(cdb->clientName[i],clntInfo->clientName,MAX_CLIENT_NAME);
 	cdb->clientIP[i] = clntInfo->clientIP;
 	cdb->clientState[i] = clnt_registered_state;
+	clntInfo->clientId = i;
 	return G_OK;
 }
 
