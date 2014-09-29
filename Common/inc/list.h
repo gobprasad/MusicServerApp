@@ -40,6 +40,9 @@ typedef struct list
 
 void initList(LIST *);
 
+LIST_NODE *getNextNode(LIST *,LIST_NODE *);
+
+
 RESULT addFirst(LIST *, void *);
 RESULT addLast(LIST *, void *);
 void deleteAllFromList(LIST *);

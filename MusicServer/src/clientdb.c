@@ -543,11 +543,11 @@ static RESULT connectToClient(char clientId, int *sockFd)
 		cdb->deregisterClient(cdb,clientId);
 		return G_FAIL;
 	}
-	if(setSocketBlockingEnabled(*sockFd,1) != G_OK)
+	/*if(setSocketBlockingEnabled(*sockFd,1) != G_OK)
 	{
 		LOG_ERROR("Unable to set socket non blocking");
 		return G_FAIL;
-	}
+	}*/
 	return G_OK;
 }
 
@@ -651,4 +651,3 @@ static void checkAndDeleteCurrentList(char id)
 		}
 	}
 }
-

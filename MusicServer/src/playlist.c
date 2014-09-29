@@ -17,6 +17,9 @@ static RESULT deleteFromPlayList(PLAYLIST *pl,clntid_t clientId);
 static RESULT setPlayListStatus(PLAYLIST *pl,clntid_t clientId,PL_STATE state);
 static RESULT getOneForDownloading(PLAYLIST *pl,clntid_t *clientId, u32 *pltoken);
 static RESULT getOneForPlaying(PLAYLIST *pl,clntid_t *clientId, u32 *pltoken);
+static RESULT deleteFromClientHavingToken(PLAYLIST *pl,clntid_t clientId, u32 pltoken);
+RESULT tokenCheck(void *data);
+
 
 PLAYLIST *getPlayListInstance()
 {
@@ -28,6 +31,8 @@ PLAYLIST *getPlayListInstance()
 	}
 	return plInstance;
 }
+
+static u32 gToken;
 
 static void initPlayList(PLAYLIST *pl)
 {
@@ -48,6 +53,7 @@ static void initPlayList(PLAYLIST *pl)
 	pl->getOneForDownloading	= getOneForDownloading;
 	pl->getOneForPlaying        = getOneForPlaying;
 	pl->setPlayListStatus       = setPlayListStatus;
+	pl->deleteFromClientHavingToken = deleteFromClientHavingToken; 
 }
 
 
@@ -267,3 +273,33 @@ static RESULT setPlayListStatus(PLAYLIST *pl,clntid_t clientId,PL_STATE state)
 	return res;
 }
 
+
+static RESULT deleteFromClientHavingToken(PLAYLIST *pl,clntid_t clientId, u32 pltoken)
+{
+	RESULT res = G_FAIL;
+	
+	if(clientId >= MAX_CLIENT)
+	{
+		LOG_ERROR("Invalid Client Id %d",clientId);
+		return res;
+	}
+	
+	pthread_mutex_lock(&pl->playListLock);
+	gToken = pltoken;
+	res = deleteOneFromListHaving(&pl->pList[clientId], tokenCheck);
+	pl->playListSize = (res == G_OK)?pl->playListSize--:pl->playListSize;
+	pthread_mutex_unlock(&pl->playListLock);
+	return G_OK;
+}
+
+RESULT tokenCheck(void *data)
+{
+	PlayListData *plD = NULL;
+	plD = (PlayListData *)data;
+	if(plD->token == gToken)
+	{
+		free(plD->data);
+		return G_OK;
+	}
+	return G_FAIL;
+}

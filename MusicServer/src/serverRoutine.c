@@ -236,12 +236,6 @@ void *getMP3FileFromClient(void *msg)
 		postFileTransferStatus(newRmMsg);
 		return NULL;
 	}
-	if(setSocketBlockingEnabled(sockFd,1) != G_OK)
-	{
-		LOG_ERROR("Unable to set socket non blocking");
-		postFileTransferStatus(newRmMsg);
-		return NULL;
-	}
 	clntData_t clntMessage;
 	u32 reqSize = 0;
   	clntMessage.header.clntId     = req->clntId;

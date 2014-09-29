@@ -43,6 +43,7 @@ typedef struct playList
 	// Need to make it token based otherwise problem may happen
 	RESULT (*deleteDownloading)(struct playList *);
 	RESULT (*setPlayListStatus)(struct playList *,clntid_t clientId,PL_STATE state);
+	RESULT (*deleteFromClientHavingToken)(struct playList *,clntid_t clientId, u32 pltoken);
 
 }PLAYLIST;
 

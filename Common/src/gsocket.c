@@ -87,6 +87,8 @@ int createServerSocket(char *localAdd, int port)
 int createClientSocket(char *serverAdd, int port)
 {
 	int sockfd = -1;
+	fd_set writeFDs;
+	struct time_val timeout1;
 	struct sockaddr_in serv_addr;
 	if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
 	{
@@ -101,12 +103,31 @@ int createClientSocket(char *serverAdd, int port)
 	{
 		printf("\n inet_pton error occured\n");
 		return -1;
-	} 
+	}
+	
+	if(setSocketBlockingEnabled(sockFd,1) != G_OK)
+	{
+		LOG_ERROR("Unable to set socket non blocking");
+		return G_FAIL;
+	}
+
+   	FD_ZERO(&writeFDs);
+   	FD_SET(sockFd, &writeFDs);
+
+   	timeout1.tv_sec = 0;
+   	timeout1.tv_usec = 500000;
 
 	if( connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
 	{
-		printf("\n Error : Connect Failed \n");
-		return -1;
+		if(select (sockFd+1, (fd_set *)NULL, &writeFDs, (fd_set *)NULL, (struct timeval *)(&timeout1))  > 0 )
+		{
+        	return sockfd;
+		}
+    	else
+    	{
+			printf("\n Error : Connect Failed \n");
+			return -1;
+    	}
 	}
 	return sockfd;
 }

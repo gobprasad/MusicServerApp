@@ -254,7 +254,15 @@ static void servClientRequest(clntMsg_t *msg)
 
 			break;
 		case delete_m:
-
+			LOG_MSG("Delete request received");
+			if( )
+			{
+				msg->clntData.header.msgId = resErr_m;
+				LOG_ERROR("Error in addToQueue");
+				sendNACKandClose((void *)msg);
+				return;
+			}
+			msg->clntData.header.msgId = resOk_m;
 			break;
 		default:
 			LOG_ERROR("FATAL Error Unknown Msg Id");

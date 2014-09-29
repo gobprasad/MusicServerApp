@@ -174,6 +174,25 @@ void *deleteLast(LIST *root)
 	return tempData;
 }
 
+LIST_NODE *getNextNode(LIST *root, LIST_NODE *currentNode)
+{
+	if(!root || !root->first)
+	{
+		return NULL;
+	}
+	if(currentNode == NULL)
+	{
+		return root->first;
+	} else {
+		if(currentNode->next != NULL)
+			return currentNode->next;
+		else
+			return NULL;
+	}
+	return NULL;
+}
+
+
 void deleteAllFromList(LIST *root)
 {
 	void *data = NULL;
