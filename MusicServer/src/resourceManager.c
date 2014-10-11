@@ -251,11 +251,8 @@ static void servClientRequest(clntMsg_t *msg)
 
 			break;
 		case deregister_m:
-
-			break;
-		case delete_m:
-			LOG_MSG("Delete request received");
-			if( )
+			LOG_MSG("deregister msg received");
+			if(cdb->deregisterClient(cdb,msg->clntData.header.clntId))
 			{
 				msg->clntData.header.msgId = resErr_m;
 				LOG_ERROR("Error in addToQueue");
@@ -263,6 +260,24 @@ static void servClientRequest(clntMsg_t *msg)
 				return;
 			}
 			msg->clntData.header.msgId = resOk_m;
+
+			//Send Ack to client and close connection
+			sendACKandClose((void *)msg);
+
+			break;
+		case delete_m:
+			LOG_MSG("Delete request received");
+			if(cdb->deleteFromQueue(cdb, msg->clntData.header.clntId, *((u32*)msg->clntData.payLoad))
+			{
+				msg->clntData.header.msgId = resErr_m;
+				LOG_ERROR("Error in addToQueue");
+				sendNACKandClose((void *)msg);
+				return;
+			}
+			msg->clntData.header.msgId = resOk_m;
+
+			//Send Ack to client and close connection
+			sendACKandClose((void *)msg);
 			break;
 		default:
 			LOG_ERROR("FATAL Error Unknown Msg Id");
@@ -316,6 +331,7 @@ static void moveToPlaying(RManager *rm, rmMsg_t *rmsg)
 			{
 				LOG_ERROR("File is not ready for Playing");
 				rm->rmState = rm_Idle;
+				callSchedular(rm,rmsg);
 				break;
 			}
 			LOG_MSG("Sending file %s to MP3 Player for playing", mp->fileName);
@@ -355,7 +371,7 @@ static void callSchedular(RManager *rm, rmMsg_t *rmsg)
 	CLIENT_DB *cdb = getClientDbInstance();
 	if(cdb == NULL)
 	{
-		LOG_ERROR("Client DB instance is NULL"); 
+		LOG_ERROR("Client DB instance is NULL");
 		return;
 	}
 

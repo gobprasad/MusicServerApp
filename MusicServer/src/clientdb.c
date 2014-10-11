@@ -36,6 +36,7 @@ static void sendDeleteOneToClient(char clientId, u32 m_token);
 static clntData_t *createClientMsg(char clntId, u32 m_token, msg_type_t id);
 static void checkAndDeleteCurrentList(char id);
 
+static RESULT deleteFromQueueFunc(CLIENT_DB *cdb,clntid_t id,u32 token);
 
 
 
@@ -77,6 +78,7 @@ static void initClientDb(CLIENT_DB *cdb)
 	cdb->setDownloadingStatus   = setDownloadingStatusFunc;
 	cdb->getClientRequestForPlaying = getClientRequestForPlayingFunc;
 	cdb->setPlayingStatus       = setPlayingStatusFunc;
+	cdb->deleteFromQueue        = deleteFromQueueFunc;
 	
 	
 	//Get PlayList Class Instance
@@ -386,6 +388,71 @@ static RESULT deleteAllDataOfClient(CLIENT_DB *cdb,clntid_t id)
 	cdb->playList->deleteFromPlayList(cdb->playList,id);
 	return G_OK;
 }
+
+static RESULT deleteFromQueueFunc(CLIENT_DB *cdb,clntid_t id,u32 token)
+{
+	RESULT ret = G_FAIL;
+	MPlayer *mPlayer = getMPlayerInstance();
+	if(!cdb || id >= MAX_CLIENT)
+	{
+		LOG_ERROR("FATAL ERROR cdb null or id not matching");
+		return ret;
+	}
+	if(cdb->clientState[id] == clnt_unregister_state)
+	{
+		LOG_ERROR("delete request from unregistered client id = %d", id);
+		ret = G_FAIL;
+	}
+	else if(cdb->schData[0].clientId == id && cdb->schData[0].reqToken == token)
+	{
+		if(cdb->schData[0].status == PL_PLAYING)
+		{
+			mPlayer->stop = 1;
+			LOG_MSG("Deleted Playing Data data");
+			ret = G_OK;
+		}
+		else if(cdb->schData[0].status == PL_READY)
+		{
+			cdb->schData[0].status   = PL_NONE;
+			unlink(cdb->schData[0].fileName);
+			ret = cdb->playList->deleteFromClientHavingToken(cdb->playList,token);
+			LOG_MSG("Deleted downloaded data, ret = %d", ret);
+		}
+		else
+		{
+			LOG_ERROR("Unable to delete cdb schData");
+			ret = G_FAIL;
+		}
+	}
+	else if(cdb->schData[1].clientId == id && cdb->schData[1].reqToken == token)
+	{
+		if(cdb->schData[1].status == PL_PLAYING)
+		{
+			mPlayer->stop = 1;
+			LOG_MSG("Deleted Playing Data data");
+			ret = G_OK;
+		}
+		else if(cdb->schData[1].status == PL_READY)
+		{
+			cdb->schData[1].status   = PL_NONE;
+			unlink(cdb->schData[1].fileName);
+			ret = cdb->playList->deleteFromClientHavingToken(cdb->playList,token);
+			LOG_MSG("Deleted downloaded data, ret = %d", ret);
+		}
+		else
+		{
+			LOG_ERROR("Unable to delete cdb schData");
+			ret = G_FAIL;
+		}
+	}
+	else
+	{
+		ret = cdb->playList->deleteFromClientHavingToken(cdb->playList,token);
+		LOG_MSG("Directly deleted from queue, ret = %d", ret);
+	}
+	return ret;
+}
+
 
 void * sendAllUpdateToClient(void *data)
 {
