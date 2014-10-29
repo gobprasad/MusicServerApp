@@ -65,6 +65,7 @@ typedef struct clientDb
 CLIENT_DB *getClientDbInstance();
 void * sendAllUpdateToClient(void *data);
 void *sendOneUpdateToAllClient(void *msg);
+clntData_t *createClientMsg(char clntId, u32 m_token, msg_type_t id);
 
 
 #endif // __CLIENT_DB_H__

@@ -303,8 +303,8 @@ static void servClientRequest(clntMsg_t *msg)
 				u32 delToken;
 				memcpy(&delToken,msg->clntData.payLoad,4);
 				delToken = ntohl(delToken);
-				LOG_MSG("Delete request received for token %d" delToken);
-				if(cdb->deleteFromQueue(cdb, msg->clntData.header.clntId, delToken)
+				LOG_MSG("Delete request received for token %d",delToken);
+				if(cdb->deleteFromQueue(cdb, msg->clntData.header.clntId, delToken))
 				{
 					msg->clntData.header.msgId = resErr_m;
 					LOG_ERROR("Error in addToQueue");

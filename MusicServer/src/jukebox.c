@@ -1,7 +1,9 @@
 #include "jukebox.h"
-#include "Gthreads.h"
+#include "gthreads.h"
 #include <dirent.h>
 #include <string.h>
+#include "musicPlayer.h"
+#include "loggingFrameWork.h"
 
 
 #define JUKEBOX_ROOT_DIR  "/mnt/hdd/HDD/HindiSongs"
@@ -18,7 +20,6 @@ static void stopJukeBoxPlayerFunc(JBoxPlayer *jb);
 
 static int checkMP3File(const char *);
 
-
 int filterDirectory(const struct dirent *dir);
 
 
@@ -29,6 +30,8 @@ typedef enum
 	JB_MP3,
 	JB_LAST
 }JB_FILE_TYPE;
+
+static JB_FILE_TYPE getRandomDir(char *rootDir,char *oldDir);
 
 JBoxPlayer *getJBoxPlayerInstance()
 {
@@ -55,11 +58,12 @@ static void scheduleNextRandomSongFunc(JBoxPlayer *jb)
 {
 	MPlayer *mp = getMPlayerInstance();
 	char oldDir[2048] = {0};
+	int counter = 0;
 	JB_FILE_TYPE retType = JB_NONE;
 	memset(jb->fileName,0, sizeof(jb->fileName));
 	sprintf(jb->fileName,"%s",JUKEBOX_ROOT_DIR);
 	sprintf(oldDir,"%s",JUKEBOX_ROOT_DIR);
-	while( (retType = getRandomDir(jb->fileName)) != JB_MP3)
+	while( (retType = getRandomDir(jb->fileName,oldDir)) != JB_MP3)
 	{
 		if(retType == JB_NONE)
 		{
@@ -67,7 +71,6 @@ static void scheduleNextRandomSongFunc(JBoxPlayer *jb)
 			sprintf(jb->fileName,"%s",oldDir);
 			continue;
 		}
-		sprintf(oldDir,"%s",jb->fileName);
 	}
 	jb->isActive = 1;
 
@@ -79,7 +82,7 @@ static void scheduleNextRandomSongFunc(JBoxPlayer *jb)
 	}
 }
 
-static JB_FILE_TYPE getRandomDir(char *rootDir)
+static JB_FILE_TYPE getRandomDir(char *rootDir, char *oldDir)
 {
 	struct dirent **namelist;
 	JB_FILE_TYPE retType = JB_NONE;
@@ -98,11 +101,13 @@ static JB_FILE_TYPE getRandomDir(char *rootDir)
 	if(namelist[selected]->d_type == DT_DIR)
 	{
 		retType = JB_DIR;
+		sprintf(oldDir,"%s",rootDir);
 		sprintf(rootDir,"%s/%s",rootDir,namelist[selected]->d_name);
 	}
 	else if((namelist[selected]->d_type == DT_REG) && (checkMP3File(namelist[selected]->d_name)))
 	{
 		retType = JB_MP3;
+		sprintf(oldDir,"%s",rootDir);
 		sprintf(rootDir,"%s/%s",rootDir,namelist[selected]->d_name);
 	}
 	else

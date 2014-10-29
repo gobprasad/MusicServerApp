@@ -33,7 +33,6 @@ static RESULT setClientStateActive(CLIENT_DB *cdb, clntid_t id);
 static RESULT sendOneUpdate(clntData_t *data, int sockFd);
 static RESULT connectToClient(char clientId, int *sockFd);
 static void sendDeleteOneToClient(char clientId, u32 m_token);
-static clntData_t *createClientMsg(char clntId, u32 m_token, msg_type_t id);
 static void checkAndDeleteCurrentList(char id);
 
 static RESULT deleteFromQueueFunc(CLIENT_DB *cdb,clntid_t id,u32 token);
@@ -619,7 +618,7 @@ static RESULT connectToClient(char clientId, int *sockFd)
 }
 
 
-static clntData_t *createClientMsg(char clntId, u32 m_token, msg_type_t id)
+clntData_t *createClientMsg(char clntId, u32 m_token, msg_type_t id)
 {
 	clntData_t *clntMessage = NULL;
 	clntMessage = (clntData_t *)malloc(sizeof(clntData_t));
