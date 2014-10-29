@@ -100,7 +100,7 @@ static RESULT deletePlaying(PLAYLIST *pl)
 	RESULT res = G_ERR;
 	pthread_mutex_lock(&pl->playListLock);
 	res = deleteOneFromListHaving(&pl->pList[pl->currentPlayingClient], playingCheck);
-	pl->playListSize = (res == G_OK)?pl->playListSize--:pl->playListSize;
+	pl->playListSize = (res == G_OK)?--pl->playListSize:pl->playListSize;
 	pthread_mutex_unlock(&pl->playListLock);
 	return res;
 }

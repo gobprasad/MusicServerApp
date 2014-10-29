@@ -415,7 +415,7 @@ static RESULT deleteFromQueueFunc(CLIENT_DB *cdb,clntid_t id,u32 token)
 		{
 			cdb->schData[0].status   = PL_NONE;
 			unlink(cdb->schData[0].fileName);
-			ret = cdb->playList->deleteFromClientHavingToken(cdb->playList,token);
+			ret = cdb->playList->deleteFromClientHavingToken(cdb->playList,id,token);
 			LOG_MSG("Deleted downloaded data, ret = %d", ret);
 		}
 		else
@@ -436,7 +436,7 @@ static RESULT deleteFromQueueFunc(CLIENT_DB *cdb,clntid_t id,u32 token)
 		{
 			cdb->schData[1].status   = PL_NONE;
 			unlink(cdb->schData[1].fileName);
-			ret = cdb->playList->deleteFromClientHavingToken(cdb->playList,token);
+			ret = cdb->playList->deleteFromClientHavingToken(cdb->playList,id,token);
 			LOG_MSG("Deleted downloaded data, ret = %d", ret);
 		}
 		else
@@ -447,7 +447,7 @@ static RESULT deleteFromQueueFunc(CLIENT_DB *cdb,clntid_t id,u32 token)
 	}
 	else
 	{
-		ret = cdb->playList->deleteFromClientHavingToken(cdb->playList,token);
+		ret = cdb->playList->deleteFromClientHavingToken(cdb->playList,id,token);
 		LOG_MSG("Directly deleted from queue, ret = %d", ret);
 	}
 	return ret;

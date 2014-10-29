@@ -9,6 +9,9 @@
 #include <stdio.h>
 #include <pthread.h>
 #include "loggingFrameWork.h"
+#include <arpa/inet.h>
+#include "jukebox.h"
+
 
 static RManager *rmInstance = NULL;
 
@@ -54,6 +57,8 @@ static void initRmManager(RManager *rm)
 	rm->postMsgToRm = postMsgToRmQueue;
 	rm->runRM       = runResourceManager;
 	rm->rmState     = rm_Idle;
+
+	rm->JBPlayer = getJBoxPlayerInstance();
 	
 	rm->rmRunState[rm_Idle][rm_clntMsg_m]     = callSchedular; //check first msg id
 	rm->rmRunState[rm_Idle][rm_mplayerDone_m] = printRMStateError;
@@ -113,6 +118,7 @@ static void runResourceManager(RManager *rm)
 		return;
 	}
 	printf("running %s\n",__FUNCTION__);
+	rm->JBPlayer->startJukeBoxPlayer(rm->JBPlayer);
 	// Never return from here
 	while(1)
 	{
@@ -132,12 +138,39 @@ static void servRequest(RManager *rm, rmMsg_t * rmsg)
 	switch(rmsg->msgId)
 	{
 		case rm_clntMsg_m:
+			if(((clntMsg_t *)rmsg->data)->clntData.header.msgId != register_m)
+			{
+				if(rm->JBPlayer->isActive == 1)
+				{
+					rm->JBPlayer->stopJukeBoxPlayer(rm->JBPlayer);
+				}
+			}
 			servClientRequest((clntMsg_t *)rmsg->data);
 			break;
 		case rm_mplayerDone_m:
-		case rm_mplayerStop_m:
 		case rm_mplayerErr_m:
-			servMplayerResponse(rm, rmsg);
+			if(rm->JBPlayer->isActive == 1)
+			{
+				rm->JBPlayer->scheduleNextRandomSong(rm->JBPlayer);
+				free(rmsg);
+				return;
+			}
+			else
+			{
+				servMplayerResponse(rm, rmsg);
+			}
+			break;
+		case rm_mplayerStop_m:
+			if(rm->JBPlayer->isActive == 1)
+			{
+				rm->JBPlayer->isActive == 0;
+				free(rmsg);
+				return;
+			}
+			else
+			{
+				servMplayerResponse(rm, rmsg);
+			}
 			break;
 		case rm_dw_complete_m:
 			handleDownloadComplete(rm,rmsg);
@@ -266,18 +299,25 @@ static void servClientRequest(clntMsg_t *msg)
 
 			break;
 		case delete_m:
-			LOG_MSG("Delete request received");
-			if(cdb->deleteFromQueue(cdb, msg->clntData.header.clntId, *((u32*)msg->clntData.payLoad))
 			{
-				msg->clntData.header.msgId = resErr_m;
-				LOG_ERROR("Error in addToQueue");
-				sendNACKandClose((void *)msg);
-				return;
-			}
-			msg->clntData.header.msgId = resOk_m;
+				u32 delToken;
+				memcpy(&delToken,msg->clntData.payLoad,4);
+				delToken = ntohl(delToken);
+				LOG_MSG("Delete request received for token %d" delToken);
+				if(cdb->deleteFromQueue(cdb, msg->clntData.header.clntId, delToken)
+				{
+					msg->clntData.header.msgId = resErr_m;
+					LOG_ERROR("Error in addToQueue");
+					sendNACKandClose((void *)msg);
+					return;
+				}
+				msg->clntData.header.msgId = resOk_m;
 
-			//Send Ack to client and close connection
-			sendACKandClose((void *)msg);
+				//Send Ack to client and close connection
+				sendACKandClose((void *)msg);
+				clntData_t *clMsg = createClientMsg(msg->clntData.header.clntId,delToken,client_delete_req_m);
+				addJobToQueue(sendOneUpdateToAllClient,(void * )clMsg);
+			}
 			break;
 		default:
 			LOG_ERROR("FATAL Error Unknown Msg Id");

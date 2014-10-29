@@ -5,6 +5,8 @@
 #include "queue.h"
 #include "serverRoutine.h"
 #include "packet.h"
+#include "jukebox.h"
+
 
 #define MP3FILE_LOC	"/tmp/Mserver"
 
@@ -44,6 +46,7 @@ typedef struct rmMan
 {
 	QUEUE rmQueue;
 	rmState_e rmState;
+	JBoxPlayer *JBPlayer;
 	rmStateFunc rmRunState[rm_LastState][rm_lastMsg_m];
 	RESULT (*postMsgToRm)(struct rmMan *, rmMsg_t *);
 	void (*runRM)(struct rmMan *);

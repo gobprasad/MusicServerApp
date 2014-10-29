@@ -57,6 +57,7 @@ void *startServerSocket(void *arg)
 		clntMsg_t *newClntMsg = (clntMsg_t *)malloc(sizeof(clntMsg_t));
 		newClntMsg->clntSockFd = clntSockFd;
 		newClntMsg->cli_addr   = cli_addr.sin_addr.s_addr;
+		newClntMsg->clntData.payLoad = NULL;
 		LOG_MSG("connected to sockfd %d",clntSockFd);
 		// Add clnt handling to Job Queue
 		addJobToQueue(handleClient, (void *)newClntMsg);
